@@ -1,24 +1,33 @@
 /**
- * Cloudflare Pages Function�?api/exhibitions
+ * Cloudflare Pages Function：/api/exhibitions
  *
- * �?? Notion API，�?展覽追蹤資�?庫�??�容轉�?乾淨??JSON 給�?端用?? * Notion Token �?Cloudflare Pages ?��?變數讀?��?變數?�稱：NOTION_TOKEN）�? *
- * ?�署?��?變數�? *   NOTION_TOKEN     Notion Integration Token（�?填�?
- *   NOTION_DATABASE_ID  Notion 資�?�?ID（選填�??�設?��?覽追蹤�? ID�? */
+ * 代理 Notion API，把展覽追蹤資料庫的內容轉成乾淨的 JSON 給前端用。
+ * Notion Token 從 Cloudflare Pages 環境變數讀取（變數名稱：NOTION_TOKEN）。
+ *
+ * 使用 Notion 2025-09-03 API（data sources endpoint，支援 multi-source databases）。
+ *
+ * 部署環境變數：
+ *   NOTION_TOKEN              Notion Integration Token（必填）
+ *   NOTION_DATA_SOURCE_ID     Notion data source ID（選填，預設為展覽追蹤的 ID）
+ */
 
-const DEFAULT_DATABASE_ID = "f329eabe-5cb8-4f3e-af6f-5f722ab39d13";
+const DEFAULT_DATA_SOURCE_ID = "f329eabe-5cb8-4f3e-af6f-5f722ab39d13";
 const NOTION_VERSION = "2025-09-03";
 
 export async function onRequest(context) {
   const { env } = context;
 
   const token = env.NOTION_TOKEN;
-  const databaseId = env.NOTION_DATABASE_ID || DEFAULT_DATABASE_ID;
+  const dataSourceId =
+    env.NOTION_DATA_SOURCE_ID ||
+    env.NOTION_DATABASE_ID ||
+    DEFAULT_DATA_SOURCE_ID;
 
   if (!token) {
     return jsonResponse(
       {
-        error: "NOTION_TOKEN ?�設�?,
-        hint: "請在 Cloudflare Pages 專�???Settings ??Environment variables ?��? NOTION_TOKEN",
+        error: "NOTION_TOKEN not configured",
+        hint: "Set NOTION_TOKEN in Cloudflare Pages environment variables",
       },
       500,
     );
@@ -28,16 +37,15 @@ export async function onRequest(context) {
     const allResults = [];
     let cursor = undefined;
 
-    // Notion API 一次�?�?100 筆�???pagination 以防將�?資�?超�? 100
+    // Notion API 一次最多 100 筆，做 pagination 以防將來資料超過 100
     do {
       const body = {
         page_size: 100,
-        sorts: [{ property: "?��??��?", direction: "ascending" }],
       };
       if (cursor) body.start_cursor = cursor;
 
       const resp = await fetch(
-        `https://api.notion.com/v1/data_sources/${databaseId}/query`,
+        `https://api.notion.com/v1/data_sources/${dataSourceId}/query`,
         {
           method: "POST",
           headers: {
@@ -53,7 +61,7 @@ export async function onRequest(context) {
         const text = await resp.text();
         return jsonResponse(
           {
-            error: `Notion API ?��? ${resp.status}`,
+            error: `Notion API responded ${resp.status}`,
             detail: safeParse(text),
           },
           502,
@@ -65,7 +73,9 @@ export async function onRequest(context) {
       cursor = data.has_more ? data.next_cursor : undefined;
     } while (cursor);
 
-    const exhibitions = allResults.map(transformPage);
+    const exhibitions = allResults
+      .map(transformPage)
+      .sort(sortByStartDate);
 
     return jsonResponse({
       exhibitions,
@@ -74,7 +84,7 @@ export async function onRequest(context) {
     });
   } catch (err) {
     return jsonResponse(
-      { error: err?.message || "?�知?�誤" },
+      { error: err?.message || "Unknown error" },
       500,
     );
   }
@@ -88,19 +98,28 @@ function transformPage(page) {
   return {
     id: page.id,
     notionUrl: page.url,
-    name: getTitle(p["展覽?�稱"]),
-    startDate: getDateStart(p["?��??��?"]),
-    endDate: getDateEnd(p["結�??��?"]) || getDateStart(p["結�??��?"]),
-    industry: getMultiSelect(p["?�業類別"]),
-    confidence: getSelect(p["信�?�?]),
-    location: getSelect(p["?��?"]),
-    sourceLevel: getSelect(p["來�?層次"]),
-    organizer: getRichText(p["主辦?��?"]),
-    officialUrl: getUrl(p["官方網�?"]),
-    relatedStocks: getRichText(p["?��??�股"]),
-    status: getSelect(p["?�??]),
+    name: getTitle(findProp(p, ["展覽名稱", "Name", "Title"])),
+    startDate: getDateStart(findProp(p, ["開始日期", "Start", "Start Date"])),
+    endDate:
+      getDateEnd(findProp(p, ["結束日期", "End", "End Date"])) ||
+      getDateStart(findProp(p, ["結束日期", "End", "End Date"])),
+    industry: getMultiSelect(findProp(p, ["產業類別", "Industry"])),
+    confidence: getSelect(findProp(p, ["信心度", "Confidence"])),
+    location: getSelect(findProp(p, ["地點", "Location"])),
+    sourceLevel: getSelect(findProp(p, ["來源層次", "Source"])),
+    organizer: getRichText(findProp(p, ["主辦單位", "Organizer"])),
+    officialUrl: getUrl(findProp(p, ["官方網址", "URL", "Website"])),
+    relatedStocks: getRichText(findProp(p, ["相關個股", "Stocks"])),
+    status: getSelect(findProp(p, ["狀態", "Status"])),
     lastEdited: page.last_edited_time,
   };
+}
+
+function findProp(props, names) {
+  for (const n of names) {
+    if (props[n] !== undefined) return props[n];
+  }
+  return undefined;
 }
 
 function getTitle(prop) {
@@ -131,6 +150,12 @@ function getDateEnd(prop) {
 
 function getUrl(prop) {
   return prop?.url || "";
+}
+
+function sortByStartDate(a, b) {
+  const aDate = a.startDate || "9999-12-31";
+  const bDate = b.startDate || "9999-12-31";
+  return aDate.localeCompare(bDate);
 }
 
 function safeParse(text) {
