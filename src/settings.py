@@ -17,7 +17,9 @@ def _require(key: str) -> str:
     return value
 
 
-GEMINI_API_KEY = _require("GEMINI_API_KEY")
+# GEMINI_API_KEY 只在跑層次 2 (Gemini 查詢/複核) 時需要
+# generate_ics 等其他用途不需要,設成 optional 避免 import 時就爆
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 NOTION_TOKEN = _require("NOTION_TOKEN")
 NOTION_DATABASE_ID = _require("NOTION_DATABASE_ID")
 
