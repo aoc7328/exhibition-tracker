@@ -115,6 +115,15 @@
       </div>
     </section>
 
+    <!-- ============ INDUSTRY FILTER (次層篩選) ============ -->
+    <section class="filters-secondary">
+      <span class="filters-secondary-label">產業</span>
+      <div class="filter-group filter-group-industry" id="industry-chips" role="tablist" aria-label="產業篩選">
+        <button class="chip chip-industry-filter active" data-filter-industry="all">全部</button>
+        <!-- 其他 chip 由 app.js 從資料動態生成 -->
+      </div>
+    </section>
+
     <!-- ============ META BAR ============ -->
     <div class="meta-bar">
       <span id="result-count">—</span>
@@ -128,7 +137,13 @@
         <thead>
           <tr>
             <th class="col-name">展覽名稱</th>
-            <th class="col-date">日期</th>
+            <th class="col-date">
+              <span class="th-label">日期</span>
+              <span class="sort-arrows">
+                <button class="sort-arrow active" data-sort-direction="asc" title="升冪（早→晚）" aria-label="升冪排序">▲</button>
+                <button class="sort-arrow" data-sort-direction="desc" title="降冪（晚→早）" aria-label="降冪排序">▼</button>
+              </span>
+            </th>
             <th class="col-countdown">倒數</th>
             <th class="col-industry">產業</th>
             <th class="col-location">地點</th>

@@ -20,8 +20,14 @@ const state = {
     type: "all", // all | exhibition | company
     status: "已確認", // 預設只看已確認
     location: "all",
+    industry: "all", // 次層產業篩選
     search: "",
   },
+  sort: {
+    by: "startDate",
+    direction: "asc", // asc | desc
+  },
+  knownIndustries: [], // 記錄已渲染過的產業列表，避免每次資料更新都重生 chip
 };
 
 /* ---------- Boot ---------- */
@@ -71,6 +77,17 @@ function bindEvents() {
     render();
   });
 
+  // 日期排序箭頭
+  document.querySelectorAll("[data-sort-direction]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.sort.direction = btn.dataset.sortDirection;
+      document.querySelectorAll("[data-sort-direction]").forEach((b) => {
+        b.classList.toggle("active", b === btn);
+      });
+      render();
+    });
+  });
+
   // 視窗從背景切回前景 → 立刻刷新
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
@@ -117,6 +134,7 @@ async function fetchData(manual = false) {
     state.fetchedAt = new Date(data.fetchedAt || Date.now());
     state.lastError = null;
 
+    setupIndustryChips();
     render();
     setStatus("ok", "已同步");
     updateLastUpdatedLabel();
@@ -172,9 +190,9 @@ function render() {
 
   errorEl.hidden = true;
 
-  const rows = state.exhibitions
-    .map(decorateExhibition)
-    .filter(matchesFilter);
+  const rows = sortByDate(
+    state.exhibitions.map(decorateExhibition).filter(matchesFilter)
+  );
 
   state.filteredCount = rows.length;
 
@@ -233,6 +251,46 @@ function startOfDay(d) {
   return x;
 }
 
+/* ---------- Industry chips (次層產業篩選) ---------- */
+function setupIndustryChips() {
+  // 從目前資料抽出所有曾出現的產業（已排除「企業」，因為後端 industries 已過濾）
+  const seen = new Set();
+  for (const exh of state.exhibitions) {
+    const items = exh.industries || exh.industry || [];
+    for (const i of items) seen.add(i);
+  }
+  const sorted = [...seen].sort((a, b) => a.localeCompare(b, "zh-Hant"));
+
+  // 如果產業列表跟上次相同，不重生 chip（避免閃動）
+  const same =
+    sorted.length === state.knownIndustries.length &&
+    sorted.every((v, i) => v === state.knownIndustries[i]);
+  if (same) return;
+  state.knownIndustries = sorted;
+
+  const container = document.getElementById("industry-chips");
+  const allBtn = `<button class="chip chip-industry-filter${
+    state.filter.industry === "all" ? " active" : ""
+  }" data-filter-industry="all">全部</button>`;
+  const otherBtns = sorted
+    .map(
+      (ind) =>
+        `<button class="chip chip-industry-filter${
+          state.filter.industry === ind ? " active" : ""
+        }" data-filter-industry="${escapeAttr(ind)}">${escapeHtml(ind)}</button>`,
+    )
+    .join("");
+  container.innerHTML = allBtn + otherBtns;
+
+  container.querySelectorAll("[data-filter-industry]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setActiveChip(btn, "data-filter-industry");
+      state.filter.industry = btn.dataset.filterIndustry;
+      render();
+    });
+  });
+}
+
 /* ---------- Filter ---------- */
 function matchesFilter(exh) {
   // Type filter（最前面的篩選）
@@ -261,6 +319,12 @@ function matchesFilter(exh) {
     return false;
   }
 
+  // Industry filter（次層篩選，跟主要篩選 AND 並存）
+  if (state.filter.industry !== "all") {
+    const items = exh.industries || exh.industry || [];
+    if (!items.includes(state.filter.industry)) return false;
+  }
+
   // Search filter
   const q = state.filter.search;
   if (q) {
@@ -278,6 +342,16 @@ function matchesFilter(exh) {
   }
 
   return true;
+}
+
+/* ---------- Sort ---------- */
+function sortByDate(rows) {
+  const dir = state.sort.direction === "desc" ? -1 : 1;
+  return [...rows].sort((a, b) => {
+    const aDate = a.startDate || (dir > 0 ? "9999-12-31" : "0000-01-01");
+    const bDate = b.startDate || (dir > 0 ? "9999-12-31" : "0000-01-01");
+    return dir * aDate.localeCompare(bDate);
+  });
 }
 
 /* ---------- Row HTML ---------- */
