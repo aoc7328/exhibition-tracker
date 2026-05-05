@@ -35,9 +35,11 @@ from src.notion_writer import (  # noqa: E402
     mark_expired_confirmed,
     upsert_exhibition,
 )
+from src.scrapers.earnings import fetch_earnings  # noqa: E402
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
 from src.settings import (  # noqa: E402
+    FINNHUB_API_KEY,
     GITHUB_REPO,
     GITHUB_TOKEN,
     INDUSTRIES_YAML,
@@ -120,6 +122,41 @@ def _should_skip_claude(ex_name: str, year: int) -> bool:
     except ValueError:
         return False
     return end_d >= date.today()
+
+
+def run_earnings(dry_run: bool) -> None:
+    """從 Finnhub 抓 9 家美股龍頭 quarterly earnings → 寫 Notion"""
+    if not FINNHUB_API_KEY:
+        logger.warning("FINNHUB_API_KEY 未設定,跳過 earnings scraper")
+        return
+
+    logger.info("=== Earnings: Finnhub 抓 9 家美股龍頭財報日期 ===")
+    try:
+        events = fetch_earnings(FINNHUB_API_KEY)
+    except Exception as e:
+        logger.exception(f"Finnhub fetch 失敗: {e}")
+        return
+
+    written = 0
+    for ev in events:
+        ex = Exhibition(
+            name=ev["name"],
+            start_date=ev["start_date"],
+            end_date=ev["end_date"],
+            location=Location.WORLD,
+            organizer=ev.get("organizer", ""),
+            url=ev.get("url", ""),
+            confidence=Confidence.HIGH,
+            source=SourceLayer.WHITELIST,
+            industries=["龍頭發表會"],
+            status=Status.CONFIRMED,
+        )
+        try:
+            upsert_exhibition(ex, dry_run=dry_run)
+            written += 1
+        except Exception as e:
+            logger.exception(f"upsert 失敗 {ex.unique_key}: {e}")
+    logger.info(f"Earnings: 抓到 {len(events)} 筆,寫入 {written} 筆")
 
 
 def _query_and_upsert(
@@ -310,6 +347,7 @@ def main() -> int:
     )
     parser.add_argument("--skip-layer1", action="store_true")
     parser.add_argument("--skip-layer2", action="store_true")
+    parser.add_argument("--skip-earnings", action="store_true", help="跳過 Finnhub earnings scraper")
     parser.add_argument("--skip-ics", action="store_true")
     parser.add_argument(
         "--industry",
@@ -342,6 +380,10 @@ def main() -> int:
         if not args.skip_layer1:
             # Layer 1 (TWTC + 南港) 用當年抓 default 頁面
             run_layer1(current_year, dry_run)
+
+        if not args.skip_earnings:
+            # Earnings (Finnhub API) — 快、權威、不需要 Claude CLI
+            run_earnings(dry_run)
 
         if not args.skip_layer2:
             # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)

@@ -26,6 +26,9 @@ NOTION_DATABASE_ID = _require("NOTION_DATABASE_ID")
 GITHUB_TOKEN = os.getenv("GITHUB_TOKEN", "")
 GITHUB_REPO = os.getenv("GITHUB_REPO", "")
 
+# Finnhub API（earnings calendar)
+FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
+
 GEMINI_MODEL_QUERY = "gemini-2.5-flash"
 GEMINI_MODEL_VALIDATE = "gemini-2.5-pro"
 
