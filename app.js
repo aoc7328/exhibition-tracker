@@ -358,8 +358,11 @@ function statusCell(exh) {
 function confidenceMark(c) {
   // c 例如 "🟢 高" / "🟡 中" / "🔴 低"
   if (!c) return "—";
-  const emoji = c.match(/^([🟢🟡🔴])/)?.[1];
-  return emoji || c;
+  // 用 startsWith 比 regex 安全（emoji 是 surrogate pair，無 u flag 的 regex 會拆掉變亂碼）
+  if (c.startsWith("🟢")) return "🟢";
+  if (c.startsWith("🟡")) return "🟡";
+  if (c.startsWith("🔴")) return "🔴";
+  return c;
 }
 
 /* ---------- Subscribe copy ---------- */
