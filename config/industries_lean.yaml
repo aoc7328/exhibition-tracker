@@ -57,23 +57,50 @@ industries:
       - Computex Taipei
 
   # ============================================================
-  # 龍頭年度發表會(MAG7 + 重要 AI / 科技公司)
+  # 龍頭年度發表會 + 季度財報(MAG7 + 重要 AI / 科技公司)
+  # 每家公司含:年度大型發表會 + Quarterly Earnings Call
+  # 私募公司(SpaceX/OpenAI/Anthropic)只列發表會,沒有 earnings
   # ============================================================
   - name: 龍頭發表會
-    keywords: [keynote, event, developer conference, investor day, AI day]
+    keywords: [keynote, event, developer conference, investor day, AI day, earnings, quarterly]
     known_exhibitions:
+      # --- Apple ---
       - Apple WWDC
       - Apple iPhone Event September
       - Apple Mac Event
+      - Apple Quarterly Earnings Call
+      # --- Google / Alphabet ---
       - Google I/O
       - Google Pixel Event
+      - Alphabet Quarterly Earnings Call
+      # --- NVIDIA ---
       - NVIDIA GTC
+      - NVIDIA Quarterly Earnings Call
+      # --- AMD ---
       - AMD Advancing AI Event
-      - OpenAI DevDay
-      - Anthropic Developer Conference
+      - AMD Quarterly Earnings Call
+      # --- Microsoft ---
+      - Microsoft Build
+      - Microsoft Ignite
+      - Microsoft Quarterly Earnings Call
+      # --- Meta ---
+      - Meta Connect
+      - Meta Quarterly Earnings Call
+      # --- Amazon ---
       - AWS re:Invent
+      - Amazon Quarterly Earnings Call
+      # --- Oracle ---
+      - Oracle CloudWorld
+      - Oracle Quarterly Earnings Call
+      # --- Tesla ---
       - Tesla AI Day
+      - Tesla Quarterly Earnings Call
+      # --- SpaceX (private, no earnings) ---
       - SpaceX Starship Update
+      # --- OpenAI (private, no earnings) ---
+      - OpenAI DevDay
+      # --- Anthropic (private, no earnings) ---
+      - Anthropic Developer Conference
 
   # ============================================================
   # 臺灣專屬(同完整版)
