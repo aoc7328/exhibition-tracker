@@ -161,6 +161,46 @@ def find_existing(unique_key: str) -> tuple[str, dict[str, Any]] | None:
     return results[0]["id"], results[0].get("properties", {})
 
 
+def _page_to_meta(page: dict[str, Any]) -> "Any":
+    """從 Notion page 提取 deduper.ExhibitionMeta"""
+    from .deduper import ExhibitionMeta
+
+    props = page.get("properties", {})
+    start_str = _extract_date_start(props.get("開始日期", {}))
+    end_via_range = _extract_date_end(props.get("開始日期", {}))
+    end_separate = _extract_date_start(props.get("結束日期", {}))
+    end_str = end_via_range or end_separate or start_str
+
+    try:
+        start = date.fromisoformat(start_str[:10]) if start_str else None
+        end = date.fromisoformat(end_str[:10]) if end_str else start
+    except (ValueError, TypeError):
+        start = end = None
+
+    return ExhibitionMeta(
+        name=_extract_text(props.get("展覽名稱", {}), "title"),
+        start_date=start,
+        end_date=end,
+        location=_extract_select_name(props.get("地點", {})) or "",
+        organizer=_extract_text(props.get("主辦單位", {}), "rich_text"),
+        url=props.get("官方網址", {}).get("url") or "",
+    )
+
+
+def _exhibition_to_meta(ex: Exhibition) -> "Any":
+    """從 Exhibition dataclass 提取 deduper.ExhibitionMeta"""
+    from .deduper import ExhibitionMeta
+
+    return ExhibitionMeta(
+        name=ex.name,
+        start_date=ex.start_date,
+        end_date=ex.end_date,
+        location=ex.location.value,
+        organizer=ex.organizer,
+        url=ex.url,
+    )
+
+
 def list_pages_by_year(year: int) -> list[dict[str, Any]]:
     """撈某年所有展(用開始日期 filter)"""
     pages: list[dict[str, Any]] = []
@@ -239,14 +279,9 @@ def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
         if year_pages:
             from .deduper import find_likely_match
 
-            candidates = [
-                (
-                    _extract_text(p.get("properties", {}).get("展覽名稱", {}), "title"),
-                    p,
-                )
-                for p in year_pages
-            ]
-            match = find_likely_match(ex.name, candidates)
+            new_meta = _exhibition_to_meta(ex)
+            candidates = [(_page_to_meta(p), p) for p in year_pages]
+            match = find_likely_match(new_meta, candidates)
             if match is not None:
                 page = match
                 return _update_existing(
