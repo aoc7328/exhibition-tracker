@@ -140,7 +140,7 @@ def run_taiwan_monthly(dry_run: bool) -> None:
             url=ev.get("url", ""),
             confidence=Confidence.HIGH,
             source=SourceLayer.WHITELIST,
-            industries=["龍頭發表會"],
+            industries=["企業"],
             status=Status.CONFIRMED,
         )
         try:
@@ -175,7 +175,7 @@ def run_earnings(dry_run: bool) -> None:
             url=ev.get("url", ""),
             confidence=Confidence.HIGH,
             source=SourceLayer.WHITELIST,
-            industries=["龍頭發表會"],
+            industries=["企業"],
             status=Status.CONFIRMED,
         )
         try:

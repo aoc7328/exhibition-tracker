@@ -57,11 +57,14 @@ industries:
       - Computex Taipei
 
   # ============================================================
-  # 龍頭年度發表會(MAG7 + 重要 AI / 科技公司)
-  # 注意:quarterly earnings 不在這裡 — 由 Finnhub API scraper 抓
+  # 企業 — MAG7 + 台股龍頭的年度發表會 / 法說會 / 月營收
+  # 注意:
+  # - quarterly earnings 由 Finnhub API scraper 抓(美股)
+  # - 月營收由 generator 抓(每月 10 日,台股)
+  # - 法說會由 Claude CLI 查(此處列已知)
   # ============================================================
-  - name: 龍頭發表會
-    keywords: [keynote, event, developer conference, investor day, AI day]
+  - name: 企業
+    keywords: [keynote, event, developer conference, investor day, AI day, 法說會]
     known_exhibitions:
       - Apple WWDC
       - Apple iPhone Event September
