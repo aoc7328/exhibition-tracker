@@ -1,0 +1,21 @@
+[project]
+name = "exhibition-tracker"
+version = "0.1.0"
+description = "台股研究用展覽追蹤系統 — Notion 審核 + Apple 行事曆訂閱"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "W", "UP", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = false
+warn_return_any = true
+warn_unused_configs = true
+ignore_missing_imports = true
+no_implicit_optional = true

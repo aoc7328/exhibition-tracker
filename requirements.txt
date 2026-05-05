@@ -1,0 +1,9 @@
+google-genai>=0.7.0
+notion-client>=2.2.0
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+tenacity>=9.0.0
+beautifulsoup4>=4.12.0
+requests>=2.32.0
+ics>=0.7.2
+pydantic>=2.0.0

@@ -1,0 +1,168 @@
+# 產業範疇定義 — 用於層次 2(白名單 + AI 動態發現)
+#
+# 每月跑時對每個產業做兩件事:
+#   ① 對 known_exhibitions 每個展查當年最新日期(Gemini Flash + Google Search)
+#   ② 用 keywords 搜尋,讓 Gemini 找出不在 known_exhibitions 裡的新興展
+# 新發現的展經 Vincent 在 Notion 將狀態改為「已確認」後,
+# 下次跑會自動回讀並補進該產業的 known_exhibitions。
+#
+# ⚠️ 草案版本 — known_exhibitions 由 Claude 憑記憶+常識列出,
+#    日期/地點/週期都會由 Gemini API + Google Search 自動驗證。
+#    Vincent QA 過後再定稿。
+
+industries:
+  - name: 半導體
+    keywords: [SEMICON, semiconductor, 半導體, 晶圓, 封測, 先進封裝, 設備材料]
+    known_exhibitions:
+      - SEMICON Taiwan
+      - SEMICON West
+      - SEMICON Europa
+      - SEMICON Korea
+      - SEMICON Japan
+      - SEMICON China
+
+  - name: 記憶體
+    keywords: [記憶體, DRAM, NAND, HBM, memory expo, flash memory summit]
+    known_exhibitions:
+      - Flash Memory Summit
+      - Memcon
+
+  - name: PCB與電子材料
+    keywords: [PCB, 印刷電路板, CCL, 銅箔基板, 玻纖布, 銅箔, 電子材料]
+    known_exhibitions:
+      - TPCA Show
+      - HKPCA Show
+      - IPC APEX Expo
+      - electronicAsia
+
+  - name: 被動元件
+    keywords: [被動元件, MLCC, 電容, 電阻, 電感, passive components]
+    known_exhibitions:
+      - Passive Components Symposium
+      - CWIEME
+
+  - name: 散熱與電源
+    keywords: [散熱, 熱管理, 液冷, 電源, 電池, thermal management, power electronics]
+    known_exhibitions:
+      - PCIM Europe
+      - APEC (Applied Power Electronics Conference)
+      - The Battery Show
+
+  - name: 顯示與面板
+    keywords: [顯示器, 面板, LCD, OLED, Micro LED, 觸控, touch panel]
+    known_exhibitions:
+      - Display Week (SID)
+      - Touch Taiwan
+      - 智慧顯示展
+
+  - name: 光通訊與矽光子
+    keywords: [光通訊, 矽光子, silicon photonics, optical communication, optical fiber]
+    known_exhibitions:
+      - OFC (Optical Fiber Communication Conference)
+      - ECOC
+      - CIOE 中國國際光電博覽會
+
+  - name: 太陽能與鈣鈦礦
+    keywords: [太陽能, 光伏, 鈣鈦礦, perovskite, solar, photovoltaic]
+    known_exhibitions:
+      - SNEC 上海光伏展
+      - Intersolar Europe
+      - Intersolar North America
+      - 台灣國際太陽光電展
+
+  - name: 通訊與5G
+    keywords: [5G, 6G, 通訊, 行動通訊, mobile world congress, telecom]
+    known_exhibitions:
+      - MWC Barcelona
+      - MWC Las Vegas
+      - 5G/6G World
+
+  - name: 衛星與太空
+    keywords: [衛星, 低軌衛星, LEO, 太空, 航太, space, satellite]
+    known_exhibitions:
+      - Satellite Show (DC)
+      - Space Symposium
+      - SmallSat
+      - World Satellite Business Week
+      - IAC International Astronautical Congress
+      - 台灣太空產業展
+
+  - name: 機器人
+    keywords: [機器人, 機械手臂, 機器狗, robot, robotics, humanoid]
+    known_exhibitions:
+      - iREX 國際機器人展
+      - Automatica
+      - World Robot Conference
+      - 台灣機器人與智慧自動化展
+      - ICRA
+      - IROS
+
+  - name: 智慧製造與精密機械
+    keywords: [智慧製造, 工業自動化, 精密機械, smart manufacturing, industrial automation]
+    known_exhibitions:
+      - Hannover Messe
+      - 台灣國際智慧製造展
+      - 國際工業材料展
+      - TIMTOS 台北國際工具機展
+      - JIMTOF
+      - EMO
+
+  - name: AI
+    keywords: [AI, 人工智慧, artificial intelligence, generative AI, 大型語言模型]
+    known_exhibitions:
+      - NVIDIA GTC
+      - World AI Conference 上海
+      - AI Expo Global
+
+  - name: 國防與無人系統
+    keywords: [國防, 無人機, 無人船, drone, defense, 軍工]
+    known_exhibitions:
+      - Eurosatory
+      - DSEI London
+      - IDEX Abu Dhabi
+      - AUSA
+      - Singapore Airshow
+      - Paris Air Show
+      - Farnborough Airshow
+      - 台北國際國防航太暨無人機展
+
+  - name: 車用電子
+    keywords: [車用電子, automotive electronics, ADAS, 自駕, EV, 電動車]
+    known_exhibitions:
+      - Electronica
+      - Automotive Engineering Expo
+      - 台北國際車用電子展
+
+  - name: 消費電子綜合
+    keywords: [消費電子, consumer electronics, tech expo]
+    known_exhibitions:
+      - CES Las Vegas
+      - IFA Berlin
+      - Computex Taipei
+
+  - name: 廣電與嵌入式
+    keywords: [廣電, broadcasting, embedded, 嵌入式]
+    known_exhibitions:
+      - IBC Amsterdam
+      - NAB Show
+      - Embedded World
+
+  - name: 文具禮品
+    keywords: [文具, 禮品, stationery, gift]
+    known_exhibitions:
+      - 台北國際文具禮品展 TIGS
+
+  - name: 建材
+    keywords: [建材, 建築, 建築材料, building materials]
+    known_exhibitions:
+      - BUILD TAIWAN 台北國際建築建材暨產品展
+      - TaipeiPLAS
+
+  - name: 旅展
+    keywords: [旅展, 觀光, travel, tourism]
+    known_exhibitions:
+      - ITF 台北國際旅展
+      - TTE 台北國際觀光博覽會
+      - 夏季旅展
+      - 台中國際旅展
+      - 高雄國際旅展

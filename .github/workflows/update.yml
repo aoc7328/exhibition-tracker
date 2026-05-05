@@ -1,0 +1,56 @@
+name: Update Exhibitions
+
+# 重要:本 workflow 故意不寫 schedule(已知 GitHub Actions schedule 在低活動倉庫不可靠)
+# 排程觸發改由 Make.com 透過 GitHub API workflow_dispatch
+on:
+  workflow_dispatch:
+    inputs:
+      year:
+        description: 目標年份(空白則用當年)
+        required: false
+        default: ""
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run layer 2 (whitelist + AI discovery)
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: |
+          if [ -n "${{ github.event.inputs.year }}" ]; then
+            python scripts/update_layer2_whitelist.py --apply --year "${{ github.event.inputs.year }}"
+          else
+            python scripts/update_layer2_whitelist.py --apply
+          fi
+
+      - name: Generate .ics file
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: python scripts/generate_ics.py
+
+      - name: Deploy .ics to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          publish_branch: gh-pages
+          keep_files: false
+          commit_message: "Update exhibitions.ics"
