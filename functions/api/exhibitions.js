@@ -1,18 +1,21 @@
 /**
  * Cloudflare Pages Function：/api/exhibitions
  *
- * 代理 Notion API，把展覽追蹤資料庫的內容轉成乾淨的 JSON 給前端用。
- * Notion Token 從 Cloudflare Pages 環境變數讀取（變數名稱：NOTION_TOKEN）。
+ * Notion 2025-09-03 API（data sources endpoint）。
  *
- * 使用 Notion 2025-09-03 API（data sources endpoint，支援 multi-source databases）。
+ * v2 變更：
+ * - 新增 isCompany boolean（產業類別是否包含「企業」）
+ * - 新增 industries array（過濾掉「企業」之後的真正產業類別）
+ * - 同時保留 industry array 作向後相容
  *
- * 部署環境變數：
+ * 環境變數：
  *   NOTION_TOKEN              Notion Integration Token（必填）
- *   NOTION_DATA_SOURCE_ID     Notion data source ID（選填，預設為展覽追蹤的 ID）
+ *   NOTION_DATA_SOURCE_ID     Notion data source ID（選填）
  */
 
 const DEFAULT_DATA_SOURCE_ID = "f329eabe-5cb8-4f3e-af6f-5f722ab39d13";
 const NOTION_VERSION = "2025-09-03";
+const COMPANY_TAG = "\u4F01\u696D"; // 「企業」
 
 export async function onRequest(context) {
   const { env } = context;
@@ -37,11 +40,8 @@ export async function onRequest(context) {
     const allResults = [];
     let cursor = undefined;
 
-    // Notion API 一次最多 100 筆，做 pagination 以防將來資料超過 100
     do {
-      const body = {
-        page_size: 100,
-      };
+      const body = { page_size: 100 };
       if (cursor) body.start_cursor = cursor;
 
       const resp = await fetch(
@@ -95,6 +95,13 @@ export async function onRequest(context) {
 function transformPage(page) {
   const p = page.properties || {};
 
+  // 「產業類別」這個欄位名 Notion 上可能用「產」(U+7522) 或「産」(U+7523)，兩個都試
+  const INDUSTRY_KEYS = ["\u7522\u696D\u985E\u5225", "\u7523\u696D\u985E\u5225", "Industry"];
+  const allTags = getMultiSelect(findProp(p, INDUSTRY_KEYS)) || [];
+  // 拆分：「企業」獨立成 isCompany；其餘為真正產業類別
+  const isCompany = allTags.includes(COMPANY_TAG);
+  const industries = allTags.filter((t) => t !== COMPANY_TAG);
+
   return {
     id: page.id,
     notionUrl: page.url,
@@ -103,7 +110,9 @@ function transformPage(page) {
     endDate:
       getDateEnd(findProp(p, ["結束日期", "End", "End Date"])) ||
       getDateStart(findProp(p, ["結束日期", "End", "End Date"])),
-    industry: getMultiSelect(findProp(p, ["產業類別", "Industry"])),
+    industries,
+    industry: industries, // 向後相容
+    isCompany,
     confidence: getSelect(findProp(p, ["信心度", "Confidence"])),
     location: getSelect(findProp(p, ["地點", "Location"])),
     sourceLevel: getSelect(findProp(p, ["來源層次", "Source"])),

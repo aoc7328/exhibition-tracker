@@ -33,6 +33,8 @@
   --accent-soft: #e8d2c8;
   --accent-2: #3d5a2c; /* deep green */
   --accent-3: #2d4a6b; /* deep blue */
+  --accent-4: #5b3f94; /* deep purple — 企業 */
+  --accent-4-soft: #ebe2f5;
 
   /* States */
   --ok: #4f7a4a;
@@ -369,6 +371,11 @@ code {
   border-color: var(--accent-3);
 }
 
+.chip-type.active {
+  background: var(--accent-4);
+  border-color: var(--accent-4);
+}
+
 .filter-search {
   flex: 1 1 240px;
   max-width: 360px;
@@ -509,6 +516,28 @@ code {
   color: var(--accent);
   text-decoration: underline;
   text-decoration-color: var(--accent);
+}
+
+/* 「企業」徽章：標在事件名稱前面，紫色，標記它是公司事件 */
+.badge-company {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--accent-4);
+  color: #fff;
+  border-radius: 3px;
+  vertical-align: 2px;
+  text-decoration: none;
+  font-family: var(--font-sans);
+}
+
+.tag-empty {
+  background: transparent;
+  color: var(--ink-4);
+  border: 1px dashed var(--rule);
 }
 
 .cell-organizer {

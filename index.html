@@ -86,9 +86,15 @@
 
     <!-- ============ FILTERS ============ -->
     <section class="filters">
+      <div class="filter-group" role="tablist" aria-label="類型篩選">
+        <button class="chip chip-type active" data-filter-type="all">全部</button>
+        <button class="chip chip-type" data-filter-type="exhibition">商展</button>
+        <button class="chip chip-type" data-filter-type="company">企業</button>
+      </div>
+
       <div class="filter-group" role="tablist" aria-label="狀態篩選">
-        <button class="chip active" data-filter-status="all">全部</button>
-        <button class="chip" data-filter-status="已確認">已確認</button>
+        <button class="chip" data-filter-status="all">全部</button>
+        <button class="chip active" data-filter-status="已確認">已確認</button>
         <button class="chip" data-filter-status="待確認">待確認</button>
         <button class="chip" data-filter-status="已過期">已過期</button>
       </div>

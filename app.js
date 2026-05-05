@@ -17,7 +17,8 @@ const state = {
   fetchedAt: null,
   lastError: null,
   filter: {
-    status: "all",
+    type: "all", // all | exhibition | company
+    status: "已確認", // 預設只看已確認
     location: "all",
     search: "",
   },
@@ -42,6 +43,13 @@ function bindEvents() {
   document.getElementById("subscribe-copy").addEventListener("click", onCopy);
 
   // 篩選 chips
+  document.querySelectorAll("[data-filter-type]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setActiveChip(btn, "data-filter-type");
+      state.filter.type = btn.dataset.filterType;
+      render();
+    });
+  });
   document.querySelectorAll("[data-filter-status]").forEach((btn) => {
     btn.addEventListener("click", () => {
       setActiveChip(btn, "data-filter-status");
@@ -227,6 +235,17 @@ function startOfDay(d) {
 
 /* ---------- Filter ---------- */
 function matchesFilter(exh) {
+  // Type filter（最前面的篩選）
+  // exhibition：有真正產業類別（過濾掉「企業」之後 length > 0）→ 商展 + 年度發表會
+  // company：有「企業」標籤 → 法說會 + 年度發表會
+  // 年度發表會兩邊都會出現（OR 邏輯，符合雙視角檢視）
+  if (state.filter.type === "exhibition") {
+    const realIndustries = exh.industries || exh.industry || [];
+    if (realIndustries.length === 0) return false;
+  } else if (state.filter.type === "company") {
+    if (!exh.isCompany) return false;
+  }
+
   // Status filter
   if (state.filter.status !== "all") {
     if (state.filter.status === "已過期") {
@@ -251,7 +270,8 @@ function matchesFilter(exh) {
       exh.name,
       exh.organizer,
       exh.relatedStocks,
-      ...(exh.industry || []),
+      ...(exh.industries || exh.industry || []),
+      exh.isCompany ? "企業" : "",
       exh.sourceLevel,
     ]
       .join(" ")
@@ -303,7 +323,10 @@ function rowHtml(exh) {
 
 function nameCell(exh) {
   const url = exh.officialUrl || exh.notionUrl;
-  const name = `<a class="cell-name" href="${escapeAttr(url)}" target="_blank" rel="noopener">${escapeHtml(exh.name)}</a>`;
+  const companyBadge = exh.isCompany
+    ? `<span class="badge-company" title="企業相關事件">企業</span>`
+    : "";
+  const name = `<a class="cell-name" href="${escapeAttr(url)}" target="_blank" rel="noopener">${companyBadge}${escapeHtml(exh.name)}</a>`;
 
   let parts = [name];
   if (exh.organizer) {
@@ -334,8 +357,9 @@ function formatDate(iso) {
 }
 
 function industryCell(exh) {
-  const items = exh.industry || [];
-  if (items.length === 0) return `<span class="tag">—</span>`;
+  // 用 industries（已過濾掉「企業」），避免重複顯示
+  const items = exh.industries || exh.industry || [];
+  if (items.length === 0) return `<span class="tag tag-empty">—</span>`;
   return items.map((s) => `<span class="tag tag-industry">${escapeHtml(s)}</span>`).join("");
 }
 
