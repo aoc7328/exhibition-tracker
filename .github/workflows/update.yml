@@ -28,6 +28,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Run layer 1 (TWTC + 南港 爬蟲)
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+        run: |
+          if [ -n "${{ github.event.inputs.year }}" ]; then
+            python scripts/update_layer1.py --apply --year "${{ github.event.inputs.year }}"
+          else
+            python scripts/update_layer1.py --apply
+          fi
+
       - name: Run layer 2 (whitelist + AI discovery)
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
