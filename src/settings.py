@@ -30,4 +30,5 @@ GEMINI_MODEL_QUERY = "gemini-2.5-flash"
 GEMINI_MODEL_VALIDATE = "gemini-2.5-pro"
 
 INDUSTRIES_YAML = PROJECT_ROOT / "config" / "industries.yaml"
+INDUSTRIES_YAML_LEAN = PROJECT_ROOT / "config" / "industries_lean.yaml"
 ICS_OUTPUT = PROJECT_ROOT / "output" / "exhibitions.ics"

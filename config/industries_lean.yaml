@@ -1,0 +1,99 @@
+# 精簡版 — 給 Claude Pro $20 訂閱用,每月一次可跑完不太撞牆
+#
+# 包含:
+#   1. 臺灣專屬(同完整版):文具/建材/旅展
+#   2. 世界各類別大型盛會(每類 1-2 個)
+#   3. MAG7 + 重要 AI/科技龍頭年度發表會
+
+industries:
+  # ============================================================
+  # 世界各類別大型盛會(每類 1-2 個)
+  # ============================================================
+  - name: 半導體
+    keywords: [SEMICON, semiconductor, 半導體, 晶圓]
+    known_exhibitions:
+      - SEMICON Taiwan
+      - SEMICON West
+
+  - name: 顯示與面板
+    keywords: [Display, OLED, Micro LED, 顯示器, 面板]
+    known_exhibitions:
+      - Display Week SID
+      - Touch Taiwan
+
+  - name: 通訊與5G
+    keywords: [MWC, 5G, 6G, mobile world]
+    known_exhibitions:
+      - MWC Barcelona
+
+  - name: 衛星與太空
+    keywords: [satellite, space, 衛星, 太空]
+    known_exhibitions:
+      - Satellite Show DC
+      - Space Symposium
+
+  - name: 機器人
+    keywords: [robotics, humanoid, 機器人]
+    known_exhibitions:
+      - iREX 國際機器人展
+      - 台灣機器人與智慧自動化展
+
+  - name: 國防與無人系統
+    keywords: [defense, drone, 國防, 無人機]
+    known_exhibitions:
+      - Eurosatory
+      - 台北國際國防航太暨無人機展
+
+  - name: 車用電子
+    keywords: [automotive, EV, 車用電子]
+    known_exhibitions:
+      - Electronica
+
+  - name: 消費電子綜合
+    keywords: [CES, IFA, Computex, consumer electronics]
+    known_exhibitions:
+      - CES Las Vegas
+      - IFA Berlin
+      - Computex Taipei
+
+  # ============================================================
+  # 龍頭年度發表會(MAG7 + 重要 AI / 科技公司)
+  # ============================================================
+  - name: 龍頭發表會
+    keywords: [keynote, event, developer conference, investor day, AI day]
+    known_exhibitions:
+      - Apple WWDC
+      - Apple iPhone Event September
+      - Apple Mac Event
+      - Google I/O
+      - Google Pixel Event
+      - NVIDIA GTC
+      - AMD Advancing AI Event
+      - OpenAI DevDay
+      - Anthropic Developer Conference
+      - AWS re:Invent
+      - Tesla AI Day
+      - SpaceX Starship Update
+
+  # ============================================================
+  # 臺灣專屬(同完整版)
+  # ============================================================
+  - name: 文具禮品
+    taiwan_only: true
+    keywords: [文具, 禮品, stationery, gift]
+    known_exhibitions:
+      - 台北國際文具禮品展 TIGS
+
+  - name: 建材
+    taiwan_only: true
+    keywords: [建材, 建築, 建築材料]
+    known_exhibitions:
+      - BUILD TAIWAN 台北國際建築建材暨產品展
+      - TaipeiPLAS
+
+  - name: 旅展
+    taiwan_only: true
+    keywords: [旅展, 觀光, travel, tourism]
+    known_exhibitions:
+      - ITF 台北國際旅展
+      - TTE 台北國際觀光博覽會

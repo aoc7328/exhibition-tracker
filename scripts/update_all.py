@@ -37,7 +37,12 @@ from src.notion_writer import (  # noqa: E402
 )
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
-from src.settings import GITHUB_REPO, GITHUB_TOKEN, INDUSTRIES_YAML  # noqa: E402
+from src.settings import (  # noqa: E402
+    GITHUB_REPO,
+    GITHUB_TOKEN,
+    INDUSTRIES_YAML,
+    INDUSTRIES_YAML_LEAN,
+)
 
 logger = get_logger(__name__)
 
@@ -173,10 +178,16 @@ def _query_and_upsert(
     upsert_exhibition(ex, dry_run=dry_run)
 
 
-def run_layer2(year: int, dry_run: bool, industry_filter: str | None = None) -> None:
-    logger.info("=== Layer 2: Claude CLI 查詢 + 雙階段複核 ===")
+def run_layer2(
+    year: int,
+    dry_run: bool,
+    industry_filter: str | None = None,
+    use_lean: bool = False,
+) -> None:
+    yaml_path = INDUSTRIES_YAML_LEAN if use_lean else INDUSTRIES_YAML
+    logger.info(f"=== Layer 2: Claude CLI 查詢 + 雙階段複核 ({'lean' if use_lean else 'full'}) ===")
 
-    with open(INDUSTRIES_YAML, encoding="utf-8") as f:
+    with open(yaml_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     industries = config.get("industries", [])
@@ -306,6 +317,11 @@ def main() -> int:
         default=None,
         help="只跑指定產業(用 industries.yaml 的名稱,例如「半導體」)",
     )
+    parser.add_argument(
+        "--lean",
+        action="store_true",
+        help="用精簡版 industries_lean.yaml(每類 1-2 大展 + MAG7 龍頭發表會),適合 Pro $20 訂閱",
+    )
     args = parser.parse_args()
 
     dry_run = args.dry_run
@@ -330,7 +346,7 @@ def main() -> int:
         # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
         for year in years:
             logger.info(f"--- Layer 2 年份: {year} ---")
-            run_layer2(year, dry_run, args.industry)
+            run_layer2(year, dry_run, args.industry, use_lean=args.lean)
 
     if not args.skip_ics:
         try:
