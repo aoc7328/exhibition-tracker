@@ -4,14 +4,14 @@ title Exhibition Tracker
 cd /d F:\exhibition-tracker
 
 echo ========================================
-echo   展覽追蹤系統 - 全自動更新
+echo  Exhibition Tracker - Auto Update
 echo ========================================
 echo.
-echo 預估時間: Layer 1 約 1 分鐘
-echo           Layer 2 約 30 分鐘 ~ 1 小時 (Claude CLI)
-echo           ICS 產生 + push 約 5 秒
+echo  Layer 1 (web scrape):  about 1 min
+echo  Layer 2 (Claude CLI):  30-60 min
+echo  ICS + push gh-pages:   5 sec
 echo.
-echo 過程中可以做別的事,不需要顧著看
+echo  You can do other things during the run.
 echo ========================================
 echo.
 
@@ -19,6 +19,6 @@ python scripts\update_all.py
 
 echo.
 echo ========================================
-echo   完成! 按任意鍵關閉
+echo  Done. Press any key to close.
 echo ========================================
 pause >nul
