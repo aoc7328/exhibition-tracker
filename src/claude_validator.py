@@ -10,6 +10,8 @@ import subprocess
 from datetime import date, datetime
 from typing import Any
 
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 from .logger import get_logger
 
 logger = get_logger(__name__)
@@ -18,6 +20,11 @@ CLI_TIMEOUT = 600
 IS_WINDOWS = platform.system() == "Windows"
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=10, min=30, max=300),
+    reraise=True,
+)
 def _call_claude(prompt: str) -> str:
     flags = ["-p", "--dangerously-skip-permissions"]
     cmd = ["cmd.exe", "/c", "claude", *flags] if IS_WINDOWS else ["claude", *flags]

@@ -126,6 +126,10 @@ def _query_and_upsert(
         return
 
     info = query_exhibition(ex_name, year)
+    if not info.get("found"):
+        logger.info(f"排除 {ex_name} {year}: {info.get('notes', '不符合篩選準則')}")
+        return
+
     start = _to_date(info.get("start_date"))
     end = _to_date(info.get("end_date"))
 
@@ -164,13 +168,21 @@ def _query_and_upsert(
     upsert_exhibition(ex, dry_run=dry_run)
 
 
-def run_layer2(year: int, dry_run: bool) -> None:
+def run_layer2(year: int, dry_run: bool, industry_filter: str | None = None) -> None:
     logger.info("=== Layer 2: Claude CLI 查詢 + 雙階段複核 ===")
 
     with open(INDUSTRIES_YAML, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
-    for ind in config.get("industries", []):
+    industries = config.get("industries", [])
+    if industry_filter:
+        industries = [i for i in industries if i.get("name") == industry_filter]
+        if not industries:
+            logger.warning(f"找不到產業: {industry_filter}")
+            return
+        logger.info(f"只跑指定產業: {industry_filter}")
+
+    for ind in industries:
         name = ind["name"]
         keywords = ind.get("keywords") or []
         known = ind.get("known_exhibitions") or []
@@ -269,6 +281,12 @@ def main() -> int:
     parser.add_argument("--skip-layer1", action="store_true")
     parser.add_argument("--skip-layer2", action="store_true")
     parser.add_argument("--skip-ics", action="store_true")
+    parser.add_argument(
+        "--industry",
+        type=str,
+        default=None,
+        help="只跑指定產業(用 industries.yaml 的名稱,例如「半導體」)",
+    )
     args = parser.parse_args()
 
     dry_run = args.dry_run
@@ -278,7 +296,7 @@ def main() -> int:
         run_layer1(args.year, dry_run)
 
     if not args.skip_layer2:
-        run_layer2(args.year, dry_run)
+        run_layer2(args.year, dry_run, args.industry)
 
     if not args.skip_ics:
         try:
