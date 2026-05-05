@@ -16,6 +16,8 @@ logger = get_logger(__name__)
 COMPANIES: list[tuple[str, str]] = [
     ("2330", "台積電"),
     ("2308", "台達電"),
+    ("2454", "聯發科"),
+    ("2317", "鴻海"),
 ]
 
 

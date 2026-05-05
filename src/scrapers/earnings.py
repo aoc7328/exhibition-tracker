@@ -30,6 +30,7 @@ TICKERS: dict[str, str] = {
     "AMZN": "Amazon",
     "ORCL": "Oracle",
     "TSLA": "Tesla",
+    "AVGO": "Broadcom",
 }
 
 
