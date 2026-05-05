@@ -236,12 +236,10 @@ function startOfDay(d) {
 /* ---------- Filter ---------- */
 function matchesFilter(exh) {
   // Type filter（最前面的篩選）
-  // exhibition：有真正產業類別（過濾掉「企業」之後 length > 0）→ 商展 + 年度發表會
-  // company：有「企業」標籤 → 法說會 + 年度發表會
-  // 年度發表會兩邊都會出現（OR 邏輯，符合雙視角檢視）
+  // exhibition：不含「企業」標籤 → 純商展（不論有無產業類別）
+  // company：含「企業」標籤 → 法說會、月營收、年度發表會
   if (state.filter.type === "exhibition") {
-    const realIndustries = exh.industries || exh.industry || [];
-    if (realIndustries.length === 0) return false;
+    if (exh.isCompany) return false;
   } else if (state.filter.type === "company") {
     if (!exh.isCompany) return false;
   }
