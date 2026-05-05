@@ -5,8 +5,8 @@
  * ?®ÁΩ≤?∞Â?ËÆäÊï∏Ôº? *   NOTION_TOKEN     Notion Integration TokenÔºàÂ?Â°´Ô?
  *   NOTION_DATABASE_ID  Notion Ë≥áÊ?Â∫?IDÔºàÈÅ∏Â°´Ô??êË®≠?∫Â?Ë¶ΩËøΩËπ§Á? IDÔº? */
 
-const DEFAULT_DATABASE_ID = "87af4c274b834bc3b7018a4597f79153";
-const NOTION_VERSION = "2022-06-28";
+const DEFAULT_DATABASE_ID = "f329eabe-5cb8-4f3e-af6f-5f722ab39d13";
+const NOTION_VERSION = "2025-09-03";
 
 export async function onRequest(context) {
   const { env } = context;
@@ -37,7 +37,7 @@ export async function onRequest(context) {
       if (cursor) body.start_cursor = cursor;
 
       const resp = await fetch(
-        `https://api.notion.com/v1/databases/${databaseId}/query`,
+        `https://api.notion.com/v1/data_sources/${databaseId}/query`,
         {
           method: "POST",
           headers: {
