@@ -161,43 +161,99 @@ def find_existing(unique_key: str) -> tuple[str, dict[str, Any]] | None:
     return results[0]["id"], results[0].get("properties", {})
 
 
+def list_pages_by_year(year: int) -> list[dict[str, Any]]:
+    """撈某年所有展(用開始日期 filter)"""
+    pages: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        body: dict[str, Any] = {
+            "filter": {
+                "and": [
+                    {"property": "開始日期", "date": {"on_or_after": f"{year}-01-01"}},
+                    {"property": "開始日期", "date": {"on_or_before": f"{year}-12-31"}},
+                ]
+            }
+        }
+        if cursor:
+            body["start_cursor"] = cursor
+        response = _post(f"/databases/{NOTION_DATABASE_ID}/query", body)
+        pages.extend(response.get("results", []))
+        if not response.get("has_more"):
+            break
+        cursor = response.get("next_cursor")
+    return pages
+
+
+def _update_existing(page_id: str, ex: Exhibition, existing_props: dict[str, Any]) -> str:
+    """共用 update 邏輯:merge industries + 比對 + 條件升級 status"""
+    existing_industries = _extract_multiselect(existing_props.get("產業類別", {}))
+    merged_industries = sorted(set(existing_industries) | set(ex.industries))
+    if merged_industries != sorted(ex.industries):
+        ex.industries = merged_industries
+
+    if _existing_matches(ex, existing_props):
+        logger.info(f"跳過(無變動): {ex.unique_key}")
+        return page_id
+
+    existing_status = (existing_props.get("狀態", {}).get("select") or {}).get("name")
+    is_upgrade = (
+        existing_status == Status.PENDING.value
+        and ex.status == Status.CONFIRMED
+    )
+    update_props = _build_properties(ex, include_status=is_upgrade)
+    _patch(f"/pages/{page_id}", {"properties": update_props})
+    msg = f"更新: {ex.unique_key}"
+    if is_upgrade:
+        msg += " (升級 待確認 → 已確認)"
+    logger.info(msg)
+    return page_id
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
-    """upsert 一筆展覽。比對既有資料,完全相同則跳過。
-    update 時不寫狀態欄位(保留 Vincent 手動審核)。"""
+    """upsert 一筆展覽。
+
+    流程:
+    1. 精確 unique key (展名+年份) 找到 → 走 update flow
+    2. 找不到 → fuzzy 匹配當年展,Claude 確認,找到 → 走 update flow
+    3. 都沒 → 真的新增
+    """
     if dry_run:
         logger.info(f"[DRY-RUN] {ex.unique_key} | {ex.status.value} | {ex.confidence.value}")
         return "dry-run"
 
+    # 1. 精確 unique key
     existing = find_existing(ex.unique_key)
     if existing:
         page_id, existing_props = existing
+        return _update_existing(page_id, ex, existing_props)
 
-        # 合併產業類別(大型展跨多個產業會被多次寫入,merge 而非覆蓋)
-        existing_industries = _extract_multiselect(existing_props.get("產業類別", {}))
-        merged_industries = sorted(set(existing_industries) | set(ex.industries))
-        if merged_industries != sorted(ex.industries):
-            ex.industries = merged_industries
+    # 2. 精確找不到 → fuzzy match (僅當有 start_date 時)
+    if ex.start_date:
+        try:
+            year_pages = list_pages_by_year(ex.start_date.year)
+        except Exception as e:
+            logger.warning(f"撈當年展失敗,跳過 fuzzy match: {e}")
+            year_pages = []
 
-        if _existing_matches(ex, existing_props):
-            logger.info(f"跳過(無變動): {ex.unique_key}")
-            return page_id
+        if year_pages:
+            from .deduper import find_likely_match
 
-        # status 處理規則:只允許「待確認 → 已確認」升級,其他不動 status
-        existing_status = (existing_props.get("狀態", {}).get("select") or {}).get("name")
-        is_upgrade = (
-            existing_status == Status.PENDING.value
-            and ex.status == Status.CONFIRMED
-        )
-        update_props = _build_properties(ex, include_status=is_upgrade)
-        _patch(f"/pages/{page_id}", {"properties": update_props})
-        msg = f"更新: {ex.unique_key}"
-        if is_upgrade:
-            msg += f" (升級 待確認 → 已確認)"
-        logger.info(msg)
-        return page_id
+            candidates = [
+                (
+                    _extract_text(p.get("properties", {}).get("展覽名稱", {}), "title"),
+                    p,
+                )
+                for p in year_pages
+            ]
+            match = find_likely_match(ex.name, candidates)
+            if match is not None:
+                page = match
+                return _update_existing(
+                    page["id"], ex, page.get("properties", {})
+                )
 
-    # 新增時送完整 properties (含 status)
+    # 3. 真的新增
     create_props = _build_properties(ex, include_status=True)
     response = _post(
         "/pages",
