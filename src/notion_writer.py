@@ -172,6 +172,13 @@ def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
     existing = find_existing(ex.unique_key)
     if existing:
         page_id, existing_props = existing
+
+        # 合併產業類別(大型展跨多個產業會被多次寫入,merge 而非覆蓋)
+        existing_industries = _extract_multiselect(existing_props.get("產業類別", {}))
+        merged_industries = sorted(set(existing_industries) | set(ex.industries))
+        if merged_industries != sorted(ex.industries):
+            ex.industries = merged_industries
+
         if _existing_matches(ex, existing_props):
             logger.info(f"跳過(無變動): {ex.unique_key}")
             return page_id
