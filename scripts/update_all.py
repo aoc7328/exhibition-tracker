@@ -50,6 +50,39 @@ from src.settings import (  # noqa: E402
 logger = get_logger(__name__)
 
 
+CORPORATE_LABEL = "企業"
+
+# 公司前綴 → 相關產業 tag(寫入 Notion 時自動加上「企業」+ 這些)
+COMPANY_TAGS: dict[str, list[str]] = {
+    "Apple": ["消費電子"],
+    "Alphabet": ["AI"],
+    "Google": ["AI", "消費電子"],
+    "NVIDIA": ["AI", "半導體"],
+    "AMD": ["AI", "半導體"],
+    "Microsoft": ["AI"],
+    "Meta": ["AI", "消費電子"],
+    "Amazon": ["AI"],
+    "AWS": ["AI"],
+    "Oracle": ["AI"],
+    "Tesla": ["車用電子", "AI"],
+    "SpaceX": ["太空航太", "低軌衛星"],
+    "OpenAI": ["AI"],
+    "Anthropic": ["AI"],
+    "台積電": ["半導體"],
+    "2330": ["半導體"],
+    "台達電": ["電源", "散熱", "車用電子"],
+    "2308": ["電源", "散熱", "車用電子"],
+}
+
+
+def _company_extra_industries(name: str) -> list[str]:
+    """根據展名前綴判斷公司,回傳 extra industries"""
+    for prefix, industries in COMPANY_TAGS.items():
+        if prefix in name:
+            return industries
+    return []
+
+
 def _to_date(s: str | None) -> date | None:
     if not s:
         return None
@@ -131,6 +164,7 @@ def run_taiwan_monthly(dry_run: bool) -> None:
     events = generate_monthly_revenue_events()
     written = 0
     for ev in events:
+        extras = _company_extra_industries(ev["name"])
         ex = Exhibition(
             name=ev["name"],
             start_date=ev["start_date"],
@@ -140,7 +174,7 @@ def run_taiwan_monthly(dry_run: bool) -> None:
             url=ev.get("url", ""),
             confidence=Confidence.HIGH,
             source=SourceLayer.WHITELIST,
-            industries=["企業"],
+            industries=sorted(set([CORPORATE_LABEL] + extras)),
             status=Status.CONFIRMED,
         )
         try:
@@ -166,6 +200,7 @@ def run_earnings(dry_run: bool) -> None:
 
     written = 0
     for ev in events:
+        extras = _company_extra_industries(ev["name"])
         ex = Exhibition(
             name=ev["name"],
             start_date=ev["start_date"],
@@ -175,7 +210,7 @@ def run_earnings(dry_run: bool) -> None:
             url=ev.get("url", ""),
             confidence=Confidence.HIGH,
             source=SourceLayer.WHITELIST,
-            industries=["企業"],
+            industries=sorted(set([CORPORATE_LABEL] + extras)),
             status=Status.CONFIRMED,
         )
         try:
@@ -227,6 +262,12 @@ def _query_and_upsert(
     loc_str = info.get("location_summary", "")
     location = Location.TAIWAN if "臺灣" in loc_str or "台灣" in loc_str else Location.WORLD
 
+    # 「企業」類別自動加上對應公司的相關產業 tag
+    industries_list = [industry]
+    if industry == CORPORATE_LABEL:
+        industries_list.extend(_company_extra_industries(ex_name))
+    industries_list = sorted(set(industries_list))
+
     ex = Exhibition(
         name=ex_name,
         start_date=start,
@@ -236,7 +277,7 @@ def _query_and_upsert(
         url=info.get("official_url", ""),
         confidence=confidence,
         source=source,
-        industries=[industry],
+        industries=industries_list,
         status=status,
     )
     upsert_exhibition(ex, dry_run=dry_run)
