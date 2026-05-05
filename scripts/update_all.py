@@ -338,16 +338,20 @@ def main() -> int:
         except Exception as e:
             logger.exception(f"標已過期失敗: {e}")
 
-    if not args.skip_layer1:
-        # Layer 1 (TWTC + 南港) 用當年抓 default 頁面
-        run_layer1(current_year, dry_run)
+    try:
+        if not args.skip_layer1:
+            # Layer 1 (TWTC + 南港) 用當年抓 default 頁面
+            run_layer1(current_year, dry_run)
 
-    if not args.skip_layer2:
-        # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
-        for year in years:
-            logger.info(f"--- Layer 2 年份: {year} ---")
-            run_layer2(year, dry_run, args.industry, use_lean=args.lean)
+        if not args.skip_layer2:
+            # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
+            for year in years:
+                logger.info(f"--- Layer 2 年份: {year} ---")
+                run_layer2(year, dry_run, args.industry, use_lean=args.lean)
+    except KeyboardInterrupt:
+        logger.warning("收到 Ctrl+C 中斷,跳過剩餘抓取,直接產 ICS + push 已寫入的資料")
 
+    # ICS + push 永遠會跑(即使前面被中斷),確保 Apple 行事曆能看到目前已寫的資料
     if not args.skip_ics:
         try:
             ics_path = generate_ics()
