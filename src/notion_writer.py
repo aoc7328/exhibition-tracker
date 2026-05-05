@@ -1,13 +1,14 @@
-"""Notion API 寫入模組
-用 unique key (展名 + 起始年份) 做 upsert,避免重複寫入
-支援 dry-run 模式(預設):印出將寫入內容,不實際寫
+"""Notion API 寫入模組(用 raw HTTP requests,不依賴 notion-client SDK)
+SDK 版本變動風險高,raw HTTP 更穩。
+- unique key (展名 + 起始年份) 做 upsert,避免重複寫入
+- 預設 dry-run:印出將寫入內容,不實際寫
 """
 from __future__ import annotations
 
 from datetime import date
 from typing import Any
 
-from notion_client import Client
+import requests
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from .logger import get_logger
@@ -16,7 +17,24 @@ from .settings import NOTION_DATABASE_ID, NOTION_TOKEN
 
 logger = get_logger(__name__)
 
-_client = Client(auth=NOTION_TOKEN)
+API = "https://api.notion.com/v1"
+_HEADERS = {
+    "Authorization": f"Bearer {NOTION_TOKEN}",
+    "Notion-Version": "2022-06-28",
+    "Content-Type": "application/json",
+}
+
+
+def _post(path: str, body: dict[str, Any]) -> dict[str, Any]:
+    r = requests.post(f"{API}{path}", json=body, headers=_HEADERS, timeout=30)
+    r.raise_for_status()
+    return r.json()
+
+
+def _patch(path: str, body: dict[str, Any]) -> dict[str, Any]:
+    r = requests.patch(f"{API}{path}", json=body, headers=_HEADERS, timeout=30)
+    r.raise_for_status()
+    return r.json()
 
 
 def _build_properties(ex: Exhibition) -> dict[str, Any]:
@@ -39,13 +57,9 @@ def _build_properties(ex: Exhibition) -> dict[str, Any]:
     if ex.url:
         props["官方網址"] = {"url": ex.url}
     if ex.industries:
-        props["產業類別"] = {
-            "multi_select": [{"name": ind} for ind in ex.industries]
-        }
+        props["產業類別"] = {"multi_select": [{"name": ind} for ind in ex.industries]}
     if ex.related_stocks:
-        props["相關個股"] = {
-            "rich_text": [{"text": {"content": ex.related_stocks}}]
-        }
+        props["相關個股"] = {"rich_text": [{"text": {"content": ex.related_stocks}}]}
     return props
 
 
@@ -56,23 +70,20 @@ def find_existing(unique_key: str) -> str | None:
     if not name or not year_str.isdigit():
         return None
     year = int(year_str)
-    year_start = date(year, 1, 1).isoformat()
-    year_end = date(year, 12, 31).isoformat()
-
-    response = _client.databases.query(
-        database_id=NOTION_DATABASE_ID,
-        filter={
-            "and": [
-                {"property": "展覽名稱", "title": {"equals": name}},
-                {"property": "開始日期", "date": {"on_or_after": year_start}},
-                {"property": "開始日期", "date": {"on_or_before": year_end}},
-            ]
+    response = _post(
+        f"/databases/{NOTION_DATABASE_ID}/query",
+        {
+            "filter": {
+                "and": [
+                    {"property": "展覽名稱", "title": {"equals": name}},
+                    {"property": "開始日期", "date": {"on_or_after": f"{year}-01-01"}},
+                    {"property": "開始日期", "date": {"on_or_before": f"{year}-12-31"}},
+                ]
+            }
         },
     )
     results = response.get("results", [])
-    if results:
-        return results[0]["id"]
-    return None
+    return results[0]["id"] if results else None
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -82,22 +93,20 @@ def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
 
     if dry_run:
         logger.info(f"[DRY-RUN] {ex.unique_key} | {ex.status.value} | {ex.confidence.value}")
-        for k, v in props.items():
-            logger.debug(f"    {k}: {v}")
         return "dry-run"
 
     existing_id = find_existing(ex.unique_key)
     if existing_id:
-        _client.pages.update(page_id=existing_id, properties=props)
+        _patch(f"/pages/{existing_id}", {"properties": props})
         logger.info(f"更新: {ex.unique_key}")
         return existing_id
 
-    response = _client.pages.create(
-        parent={"database_id": NOTION_DATABASE_ID},
-        properties=props,
+    response = _post(
+        "/pages",
+        {"parent": {"database_id": NOTION_DATABASE_ID}, "properties": props},
     )
     new_id = response["id"]
-    logger.info(f"新增: {ex.unique_key} → {new_id}")
+    logger.info(f"新增: {ex.unique_key} -> {new_id}")
     return new_id
 
 
@@ -107,18 +116,17 @@ def list_confirmed_future() -> list[dict[str, Any]]:
     results: list[dict[str, Any]] = []
     cursor: str | None = None
     while True:
-        kwargs: dict[str, Any] = {
-            "database_id": NOTION_DATABASE_ID,
+        body: dict[str, Any] = {
             "filter": {
                 "and": [
                     {"property": "狀態", "select": {"equals": Status.CONFIRMED.value}},
                     {"property": "結束日期", "date": {"on_or_after": today}},
                 ]
-            },
+            }
         }
         if cursor:
-            kwargs["start_cursor"] = cursor
-        response = _client.databases.query(**kwargs)
+            body["start_cursor"] = cursor
+        response = _post(f"/databases/{NOTION_DATABASE_ID}/query", body)
         results.extend(response.get("results", []))
         if not response.get("has_more"):
             break
