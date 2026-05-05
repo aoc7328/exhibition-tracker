@@ -20,7 +20,8 @@ IS_WINDOWS = platform.system() == "Windows"
 
 def _call_claude(prompt: str) -> str:
     """呼叫 claude -p 一次性查詢,prompt 從 stdin"""
-    cmd = ["cmd.exe", "/c", "claude", "-p"] if IS_WINDOWS else ["claude", "-p"]
+    flags = ["-p", "--dangerously-skip-permissions"]
+    cmd = ["cmd.exe", "/c", "claude", *flags] if IS_WINDOWS else ["claude", *flags]
     try:
         result = subprocess.run(
             cmd,
