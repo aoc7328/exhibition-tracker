@@ -124,12 +124,13 @@ def _query_and_upsert(
     year: int,
     dry_run: bool,
     force_low: bool = False,
+    taiwan_only: bool = False,
 ) -> None:
     if not dry_run and _should_skip_claude(ex_name, year):
         logger.info(f"跳過 Claude 查詢: {ex_name} {year}(已確認且未過期)")
         return
 
-    info = query_exhibition(ex_name, year)
+    info = query_exhibition(ex_name, year, taiwan_only=taiwan_only)
     if not info.get("found"):
         logger.info(f"排除 {ex_name} {year}: {info.get('notes', '不符合篩選準則')}")
         return
@@ -190,20 +191,28 @@ def run_layer2(year: int, dry_run: bool, industry_filter: str | None = None) -> 
         name = ind["name"]
         keywords = ind.get("keywords") or []
         known = ind.get("known_exhibitions") or []
-        logger.info(f"--- 產業: {name} ({len(known)} 已知) ---")
+        taiwan_only = bool(ind.get("taiwan_only"))
+        tag = " [僅臺灣]" if taiwan_only else ""
+        logger.info(f"--- 產業: {name}{tag} ({len(known)} 已知) ---")
 
         for ex_name in known:
             try:
-                _query_and_upsert(ex_name, name, SourceLayer.WHITELIST, year, dry_run)
+                _query_and_upsert(
+                    ex_name, name, SourceLayer.WHITELIST, year, dry_run,
+                    taiwan_only=taiwan_only,
+                )
             except Exception as e:
                 logger.exception(f"查詢失敗 {ex_name}: {e}")
 
         try:
-            new_names = discover_new_exhibitions(name, keywords, known, year)
+            new_names = discover_new_exhibitions(
+                name, keywords, known, year, taiwan_only=taiwan_only
+            )
             for ex_name in new_names:
                 try:
                     _query_and_upsert(
-                        ex_name, name, SourceLayer.AI_DISCOVERY, year, dry_run, force_low=True
+                        ex_name, name, SourceLayer.AI_DISCOVERY, year, dry_run,
+                        force_low=True, taiwan_only=taiwan_only,
                     )
                 except Exception as e:
                     logger.exception(f"動態發現後查詢失敗 {ex_name}: {e}")

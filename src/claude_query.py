@@ -62,11 +62,18 @@ def _extract_json(text: str) -> dict[str, Any]:
     raise RuntimeError(f"無法解析 Claude 輸出 JSON: {text[:300]}")
 
 
-def query_exhibition(name: str, year: int) -> dict[str, Any]:
-    """查單一展覽當年精確資訊"""
-    logger.info(f"查詢展覽 (Claude): {name} ({year})")
+def query_exhibition(name: str, year: int, taiwan_only: bool = False) -> dict[str, Any]:
+    """查單一展覽當年精確資訊。taiwan_only=True 時非台灣場 → found=false"""
+    logger.info(f"查詢展覽 (Claude): {name} ({year}){' [TW only]' if taiwan_only else ''}")
+    taiwan_constraint = (
+        "\n【地區限制】此產業類別只追蹤臺灣舉辦的場次。"
+        "若該展是在臺灣以外的國家舉辦,將 found 設為 false 並在 notes 註明「非臺灣場」。\n"
+        if taiwan_only
+        else ""
+    )
     prompt = (
-        f"請用 WebSearch 工具查找 {year} 年「{name}」展覽的精確資訊。\n\n"
+        f"請用 WebSearch 工具查找 {year} 年「{name}」展覽的精確資訊。\n"
+        f"{taiwan_constraint}\n"
         f"【投資相關性 + 規模篩選】(任一不符合 → found=false 並在 notes 說明排除原因):\n"
         f"A. 能否直接或間接影響「台股」相關產業股價?(有台廠重要參與 / 有上市櫃公司直接受益 / 屬熱門投資題材)\n"
         f"B. 規模門檻 — 至少符合一項:\n"
@@ -107,11 +114,21 @@ def discover_new_exhibitions(
     keywords: list[str],
     known_exhibitions: list[str],
     target_year: int,
+    taiwan_only: bool = False,
 ) -> list[str]:
-    """動態發現:用關鍵字找出不在 known_exhibitions 的新興展"""
-    logger.info(f"發現新展 (Claude): {industry_name}")
+    """動態發現:用關鍵字找出不在 known_exhibitions 的新興展。
+    taiwan_only=True 時只回臺灣舉辦的展。
+    """
+    logger.info(f"發現新展 (Claude): {industry_name}{' [TW only]' if taiwan_only else ''}")
     keyword_str = ", ".join(keywords)
     known_str = "\n".join(f"- {n}" for n in known_exhibitions) or "(無)"
+
+    region_constraint = (
+        "D. 【地區限制】此產業只追蹤【臺灣舉辦】的展(在台北/台中/高雄/南港等地舉辦)。"
+        "國外辦的展即使是同類別也不要列。\n"
+        if taiwan_only
+        else ""
+    )
 
     prompt = (
         f"請用 WebSearch 工具,找出 {target_year} 年「{industry_name}」相關的「中大型」產業展覽。\n\n"
@@ -120,7 +137,9 @@ def discover_new_exhibitions(
         f"【篩選準則】(必須全部符合才回傳):\n"
         f"A. 能影響台股或美股龍頭(NVIDIA/AMD/Apple/TSLA/Meta/MSFT)股價走勢\n"
         f"B. 規模門檻:展商 >= 100 / 有官方記者會 / 業界名人 keynote / 上市櫃公司主辦或贊助 — 至少一項\n"
-        f"C. 不要列入:小型 / 純學術會議 / 純消費展 / 區域性小展\n\n"
+        f"C. 不要列入:小型 / 純學術會議 / 純消費展 / 區域性小展\n"
+        f"{region_constraint}"
+        f"\n"
         f"硬性要求:\n"
         f"1. 只回傳「不在已知清單」的新興或近年舉辦的中大型展覽。\n"
         f"2. 必須是 {target_year} 年確實有舉辦的場次。\n"

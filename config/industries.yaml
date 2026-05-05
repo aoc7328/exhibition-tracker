@@ -148,17 +148,20 @@ industries:
       - Embedded World
 
   - name: 文具禮品
+    taiwan_only: true
     keywords: [文具, 禮品, stationery, gift]
     known_exhibitions:
       - 台北國際文具禮品展 TIGS
 
   - name: 建材
+    taiwan_only: true
     keywords: [建材, 建築, 建築材料, building materials]
     known_exhibitions:
       - BUILD TAIWAN 台北國際建築建材暨產品展
       - TaipeiPLAS
 
   - name: 旅展
+    taiwan_only: true
     keywords: [旅展, 觀光, travel, tourism]
     known_exhibitions:
       - ITF 台北國際旅展
