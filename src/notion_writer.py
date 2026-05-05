@@ -175,10 +175,19 @@ def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
         if _existing_matches(ex, existing_props):
             logger.info(f"跳過(無變動): {ex.unique_key}")
             return page_id
-        # 更新時不送狀態(避免覆蓋手動審核)
-        update_props = _build_properties(ex, include_status=False)
+
+        # status 處理規則:只允許「待確認 → 已確認」升級,其他不動 status
+        existing_status = (existing_props.get("狀態", {}).get("select") or {}).get("name")
+        is_upgrade = (
+            existing_status == Status.PENDING.value
+            and ex.status == Status.CONFIRMED
+        )
+        update_props = _build_properties(ex, include_status=is_upgrade)
         _patch(f"/pages/{page_id}", {"properties": update_props})
-        logger.info(f"更新: {ex.unique_key}")
+        msg = f"更新: {ex.unique_key}"
+        if is_upgrade:
+            msg += f" (升級 待確認 → 已確認)"
+        logger.info(msg)
         return page_id
 
     # 新增時送完整 properties (含 status)
@@ -190,6 +199,42 @@ def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
     new_id = response["id"]
     logger.info(f"新增: {ex.unique_key} -> {new_id}")
     return new_id
+
+
+def mark_expired_confirmed() -> int:
+    """掃 Notion,把『已確認但結束日已過』的展自動標為『已過期』,回傳改動筆數"""
+    today = date.today().isoformat()
+    pages: list[dict[str, Any]] = []
+    cursor: str | None = None
+    while True:
+        body: dict[str, Any] = {
+            "filter": {
+                "and": [
+                    {"property": "狀態", "select": {"equals": Status.CONFIRMED.value}},
+                    {"property": "結束日期", "date": {"before": today}},
+                ]
+            }
+        }
+        if cursor:
+            body["start_cursor"] = cursor
+        response = _post(f"/databases/{NOTION_DATABASE_ID}/query", body)
+        pages.extend(response.get("results", []))
+        if not response.get("has_more"):
+            break
+        cursor = response.get("next_cursor")
+
+    count = 0
+    for page in pages:
+        page_id = page["id"]
+        try:
+            _patch(
+                f"/pages/{page_id}",
+                {"properties": {"狀態": {"select": {"name": Status.EXPIRED.value}}}},
+            )
+            count += 1
+        except Exception as e:
+            logger.exception(f"標已過期失敗 page={page_id}: {e}")
+    return count
 
 
 def list_confirmed_future() -> list[dict[str, Any]]:

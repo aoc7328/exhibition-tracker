@@ -30,7 +30,11 @@ from src.claude_validator import validate_exhibition  # noqa: E402
 from src.ics_generator import generate_ics  # noqa: E402
 from src.logger import get_logger  # noqa: E402
 from src.models import Confidence, Exhibition, Location, SourceLayer, Status  # noqa: E402
-from src.notion_writer import find_existing, upsert_exhibition  # noqa: E402
+from src.notion_writer import (  # noqa: E402
+    find_existing,
+    mark_expired_confirmed,
+    upsert_exhibition,
+)
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
 from src.settings import GITHUB_REPO, GITHUB_TOKEN, INDUSTRIES_YAML  # noqa: E402
@@ -299,6 +303,15 @@ def main() -> int:
     current_year = datetime.now().year
     years = args.years or [current_year, current_year + 1]
     logger.info(f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years}")
+
+    # 開頭先掃過期(已確認但結束日已過 → 自動標已過期)
+    if not dry_run:
+        try:
+            expired = mark_expired_confirmed()
+            if expired:
+                logger.info(f"標 {expired} 筆為已過期")
+        except Exception as e:
+            logger.exception(f"標已過期失敗: {e}")
 
     if not args.skip_layer1:
         # Layer 1 (TWTC + 南港) 用當年抓 default 頁面
