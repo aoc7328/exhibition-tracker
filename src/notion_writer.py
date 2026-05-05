@@ -1,7 +1,9 @@
 """Notion API 寫入模組(用 raw HTTP requests,不依賴 notion-client SDK)
-SDK 版本變動風險高,raw HTTP 更穩。
-- unique key (展名 + 起始年份) 做 upsert,避免重複寫入
-- 預設 dry-run:印出將寫入內容,不實際寫
+特性:
+- unique key (展名 + 起始年份) 做 upsert
+- 比對核心欄位,完全相同則跳過 PATCH(不洗"最後更新"時間)
+- update 時不動「狀態」欄位(尊重 Vincent 手動審核)
+- create 時才寫入完整含 status 的初始值
 """
 from __future__ import annotations
 
@@ -37,14 +39,16 @@ def _patch(path: str, body: dict[str, Any]) -> dict[str, Any]:
     return r.json()
 
 
-def _build_properties(ex: Exhibition) -> dict[str, Any]:
+def _build_properties(ex: Exhibition, include_status: bool = True) -> dict[str, Any]:
+    """組 Notion properties payload。update 時 include_status=False 保留手動審核"""
     props: dict[str, Any] = {
         "展覽名稱": {"title": [{"text": {"content": ex.name}}]},
         "地點": {"select": {"name": ex.location.value}},
         "信心度": {"select": {"name": ex.confidence.value}},
         "來源層次": {"select": {"name": ex.source.value}},
-        "狀態": {"select": {"name": ex.status.value}},
     }
+    if include_status:
+        props["狀態"] = {"select": {"name": ex.status.value}}
     if ex.start_date:
         date_obj: dict[str, Any] = {"start": ex.start_date.isoformat()}
         if ex.end_date and ex.end_date != ex.start_date:
@@ -63,9 +67,78 @@ def _build_properties(ex: Exhibition) -> dict[str, Any]:
     return props
 
 
+def _extract_text(prop: dict[str, Any], key: str) -> str:
+    return "".join(t.get("plain_text", "") for t in (prop.get(key) or []))
+
+
+def _extract_select_name(prop: dict[str, Any]) -> str | None:
+    sel = prop.get("select")
+    return sel.get("name") if sel else None
+
+
+def _extract_multiselect(prop: dict[str, Any]) -> list[str]:
+    return sorted([s.get("name", "") for s in (prop.get("multi_select") or [])])
+
+
+def _extract_date_start(prop: dict[str, Any]) -> str | None:
+    d = prop.get("date") or {}
+    return d.get("start")
+
+
+def _extract_date_end(prop: dict[str, Any]) -> str | None:
+    d = prop.get("date") or {}
+    return d.get("end")
+
+
+def _existing_matches(ex: Exhibition, existing_props: dict[str, Any]) -> bool:
+    """比對 ex 與 Notion 既有頁面核心欄位。狀態與相關個股不比對(Vincent 手動)"""
+
+    if _extract_text(existing_props.get("展覽名稱", {}), "title") != ex.name:
+        return False
+    if _extract_select_name(existing_props.get("地點", {})) != ex.location.value:
+        return False
+    if _extract_select_name(existing_props.get("信心度", {})) != ex.confidence.value:
+        return False
+    if _extract_select_name(existing_props.get("來源層次", {})) != ex.source.value:
+        return False
+    if _extract_multiselect(existing_props.get("產業類別", {})) != sorted(ex.industries):
+        return False
+    if _extract_text(existing_props.get("主辦單位", {}), "rich_text") != ex.organizer:
+        return False
+    if (existing_props.get("官方網址", {}).get("url") or "") != ex.url:
+        return False
+
+    # 開始日期 (含 range end if present)
+    start_prop = existing_props.get("開始日期", {})
+    expected_start = ex.start_date.isoformat() if ex.start_date else None
+    if _extract_date_start(start_prop) != expected_start:
+        return False
+
+    # 開始日期欄位的 range end
+    expected_range_end = (
+        ex.end_date.isoformat()
+        if ex.end_date and ex.start_date and ex.end_date != ex.start_date
+        else None
+    )
+    if _extract_date_end(start_prop) != expected_range_end:
+        return False
+
+    # 結束日期欄位 (獨立的)
+    end_prop = existing_props.get("結束日期", {})
+    expected_end = (
+        ex.end_date.isoformat()
+        if ex.end_date and ex.start_date and ex.end_date != ex.start_date
+        else None
+    )
+    if _extract_date_start(end_prop) != expected_end:
+        return False
+
+    return True
+
+
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-def find_existing(unique_key: str) -> str | None:
-    """以 unique key (展名+年份) 找既有頁面,回傳 page_id 或 None"""
+def find_existing(unique_key: str) -> tuple[str, dict[str, Any]] | None:
+    """以 unique key (展名+年份) 找既有頁面,回傳 (page_id, properties) 或 None"""
     name, _, year_str = unique_key.rpartition(" ")
     if not name or not year_str.isdigit():
         return None
@@ -83,27 +156,36 @@ def find_existing(unique_key: str) -> str | None:
         },
     )
     results = response.get("results", [])
-    return results[0]["id"] if results else None
+    if not results:
+        return None
+    return results[0]["id"], results[0].get("properties", {})
 
 
 @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
 def upsert_exhibition(ex: Exhibition, dry_run: bool = True) -> str:
-    """upsert 一筆展覽。預設 dry-run:只印不寫"""
-    props = _build_properties(ex)
-
+    """upsert 一筆展覽。比對既有資料,完全相同則跳過。
+    update 時不寫狀態欄位(保留 Vincent 手動審核)。"""
     if dry_run:
         logger.info(f"[DRY-RUN] {ex.unique_key} | {ex.status.value} | {ex.confidence.value}")
         return "dry-run"
 
-    existing_id = find_existing(ex.unique_key)
-    if existing_id:
-        _patch(f"/pages/{existing_id}", {"properties": props})
+    existing = find_existing(ex.unique_key)
+    if existing:
+        page_id, existing_props = existing
+        if _existing_matches(ex, existing_props):
+            logger.info(f"跳過(無變動): {ex.unique_key}")
+            return page_id
+        # 更新時不送狀態(避免覆蓋手動審核)
+        update_props = _build_properties(ex, include_status=False)
+        _patch(f"/pages/{page_id}", {"properties": update_props})
         logger.info(f"更新: {ex.unique_key}")
-        return existing_id
+        return page_id
 
+    # 新增時送完整 properties (含 status)
+    create_props = _build_properties(ex, include_status=True)
     response = _post(
         "/pages",
-        {"parent": {"database_id": NOTION_DATABASE_ID}, "properties": props},
+        {"parent": {"database_id": NOTION_DATABASE_ID}, "properties": create_props},
     )
     new_id = response["id"]
     logger.info(f"新增: {ex.unique_key} -> {new_id}")

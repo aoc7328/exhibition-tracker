@@ -30,7 +30,7 @@ from src.claude_validator import validate_exhibition  # noqa: E402
 from src.ics_generator import generate_ics  # noqa: E402
 from src.logger import get_logger  # noqa: E402
 from src.models import Confidence, Exhibition, Location, SourceLayer, Status  # noqa: E402
-from src.notion_writer import upsert_exhibition  # noqa: E402
+from src.notion_writer import find_existing, upsert_exhibition  # noqa: E402
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
 from src.settings import GITHUB_REPO, GITHUB_TOKEN, INDUSTRIES_YAML  # noqa: E402
@@ -87,6 +87,32 @@ def run_layer1(year: int, dry_run: bool) -> None:
         logger.info(f"{source_name}: 抓到 {len(events)} 筆,寫入 {written} 筆")
 
 
+def _should_skip_claude(ex_name: str, year: int) -> bool:
+    """Notion 已有當年該展、狀態=已確認、結束日尚未過 → 跳過 Claude 查詢"""
+    existing = find_existing(f"{ex_name} {year}")
+    if not existing:
+        return False
+    _, props = existing
+
+    status_sel = props.get("狀態", {}).get("select") or {}
+    if status_sel.get("name") != Status.CONFIRMED.value:
+        return False
+
+    # 結束日從「結束日期」或「開始日期 range end」拿
+    end_str = (props.get("結束日期", {}).get("date") or {}).get("start")
+    if not end_str:
+        start_prop = props.get("開始日期", {}).get("date") or {}
+        end_str = start_prop.get("end") or start_prop.get("start")
+    if not end_str:
+        return False
+
+    try:
+        end_d = date.fromisoformat(end_str[:10])
+    except ValueError:
+        return False
+    return end_d >= date.today()
+
+
 def _query_and_upsert(
     ex_name: str,
     industry: str,
@@ -95,6 +121,10 @@ def _query_and_upsert(
     dry_run: bool,
     force_low: bool = False,
 ) -> None:
+    if not dry_run and _should_skip_claude(ex_name, year):
+        logger.info(f"跳過 Claude 查詢: {ex_name} {year}(已確認且未過期)")
+        return
+
     info = query_exhibition(ex_name, year)
     start = _to_date(info.get("start_date"))
     end = _to_date(info.get("end_date"))
