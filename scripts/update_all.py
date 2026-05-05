@@ -37,6 +37,7 @@ from src.notion_writer import (  # noqa: E402
 )
 from src.scrapers.earnings import fetch_earnings  # noqa: E402
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
+from src.scrapers.taiwan_monthly import generate_monthly_revenue_events  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
 from src.settings import (  # noqa: E402
     FINNHUB_API_KEY,
@@ -122,6 +123,32 @@ def _should_skip_claude(ex_name: str, year: int) -> bool:
     except ValueError:
         return False
     return end_d >= date.today()
+
+
+def run_taiwan_monthly(dry_run: bool) -> None:
+    """生成台股月營收公布日(台積電/台達電)→ 寫 Notion"""
+    logger.info("=== 台股月營收公布日(每月 10 日)===")
+    events = generate_monthly_revenue_events()
+    written = 0
+    for ev in events:
+        ex = Exhibition(
+            name=ev["name"],
+            start_date=ev["start_date"],
+            end_date=ev["end_date"],
+            location=Location.TAIWAN,
+            organizer=ev.get("organizer", ""),
+            url=ev.get("url", ""),
+            confidence=Confidence.HIGH,
+            source=SourceLayer.WHITELIST,
+            industries=["龍頭發表會"],
+            status=Status.CONFIRMED,
+        )
+        try:
+            upsert_exhibition(ex, dry_run=dry_run)
+            written += 1
+        except Exception as e:
+            logger.exception(f"upsert 失敗 {ex.unique_key}: {e}")
+    logger.info(f"台股月營收: 抓 {len(events)} 筆,寫入 {written} 筆")
 
 
 def run_earnings(dry_run: bool) -> None:
@@ -384,6 +411,8 @@ def main() -> int:
         if not args.skip_earnings:
             # Earnings (Finnhub API) — 快、權威、不需要 Claude CLI
             run_earnings(dry_run)
+            # 台股月營收(每月 10 日,純 generator,不需要 Claude)
+            run_taiwan_monthly(dry_run)
 
         if not args.skip_layer2:
             # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
