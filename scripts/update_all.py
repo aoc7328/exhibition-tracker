@@ -277,7 +277,13 @@ def push_ics_to_gh_pages(ics_path: Path) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description="本機完整 pipeline")
     parser.add_argument("--dry-run", action="store_true", help="只印不寫")
-    parser.add_argument("--year", type=int, default=datetime.now().year)
+    parser.add_argument(
+        "--years",
+        type=int,
+        nargs="+",
+        default=None,
+        help="目標年份,可多個(預設今年+明年,半年後跑會自動往未來推)",
+    )
     parser.add_argument("--skip-layer1", action="store_true")
     parser.add_argument("--skip-layer2", action="store_true")
     parser.add_argument("--skip-ics", action="store_true")
@@ -290,13 +296,19 @@ def main() -> int:
     args = parser.parse_args()
 
     dry_run = args.dry_run
-    logger.info(f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {args.year}")
+    current_year = datetime.now().year
+    years = args.years or [current_year, current_year + 1]
+    logger.info(f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years}")
 
     if not args.skip_layer1:
-        run_layer1(args.year, dry_run)
+        # Layer 1 (TWTC + 南港) 用當年抓 default 頁面
+        run_layer1(current_year, dry_run)
 
     if not args.skip_layer2:
-        run_layer2(args.year, dry_run, args.industry)
+        # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
+        for year in years:
+            logger.info(f"--- Layer 2 年份: {year} ---")
+            run_layer2(year, dry_run, args.industry)
 
     if not args.skip_ics:
         try:
