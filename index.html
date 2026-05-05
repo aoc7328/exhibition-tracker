@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="展覽追蹤・即時同步 Notion 資料庫" />
+  <title>展覽追蹤 · Exhibition Tracker</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+    rel="stylesheet"
+  />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="page">
+    <!-- ============ HEADER ============ -->
+    <header class="masthead">
+      <div class="masthead-row">
+        <div class="masthead-title">
+          <h1>展覽追蹤</h1>
+          <p class="masthead-sub">
+            Exhibition Tracker
+            <span class="dot">·</span>
+            自動同步 Notion
+          </p>
+        </div>
+
+        <div class="masthead-status" id="status-bar">
+          <button
+            class="refresh-btn"
+            id="refresh-btn"
+            type="button"
+            title="立刻重新整理"
+            aria-label="立刻重新整理"
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+              <path
+                d="M3 12a9 9 0 0 1 15.5-6.3M21 4v5h-5M21 12a9 9 0 0 1-15.5 6.3M3 20v-5h5"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            <span id="refresh-label">更新</span>
+          </button>
+          <div class="status-detail">
+            <span class="status-dot" id="status-dot" aria-hidden="true"></span>
+            <span id="status-text">準備中…</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ============ SUBSCRIBE ============ -->
+    <section class="subscribe">
+      <div class="subscribe-label">
+        <span class="subscribe-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18">
+            <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span>訂閱 Apple 行事曆</span>
+      </div>
+      <div class="subscribe-link">
+        <code id="subscribe-url">webcal://aoc7328.github.io/exhibition-tracker/exhibitions.ics</code>
+        <div class="subscribe-actions">
+          <a
+            id="subscribe-open"
+            class="btn btn-primary"
+            href="webcal://aoc7328.github.io/exhibition-tracker/exhibitions.ics"
+          >
+            一鍵訂閱
+          </a>
+          <button id="subscribe-copy" class="btn btn-ghost" type="button">
+            複製網址
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ FILTERS ============ -->
+    <section class="filters">
+      <div class="filter-group" role="tablist" aria-label="狀態篩選">
+        <button class="chip active" data-filter-status="all">全部</button>
+        <button class="chip" data-filter-status="已確認">已確認</button>
+        <button class="chip" data-filter-status="待確認">待確認</button>
+        <button class="chip" data-filter-status="已過期">已過期</button>
+      </div>
+
+      <div class="filter-group" role="tablist" aria-label="地點篩選">
+        <button class="chip chip-alt active" data-filter-location="all">全地點</button>
+        <button class="chip chip-alt" data-filter-location="臺灣">臺灣</button>
+        <button class="chip chip-alt" data-filter-location="世界">世界</button>
+      </div>
+
+      <div class="filter-search">
+        <input
+          type="search"
+          id="search-input"
+          placeholder="搜尋名稱 / 產業 / 主辦 / 個股…"
+          autocomplete="off"
+        />
+      </div>
+    </section>
+
+    <!-- ============ META BAR ============ -->
+    <div class="meta-bar">
+      <span id="result-count">—</span>
+      <span class="dot">·</span>
+      <span id="last-updated">最後更新：—</span>
+    </div>
+
+    <!-- ============ TABLE ============ -->
+    <main class="data-region">
+      <table class="exh-table" id="exh-table" aria-label="展覽列表">
+        <thead>
+          <tr>
+            <th class="col-name">展覽名稱</th>
+            <th class="col-date">日期</th>
+            <th class="col-countdown">倒數</th>
+            <th class="col-industry">產業</th>
+            <th class="col-location">地點</th>
+            <th class="col-confidence">信心度</th>
+            <th class="col-status">狀態</th>
+            <th class="col-source">來源</th>
+          </tr>
+        </thead>
+        <tbody id="exh-tbody">
+          <!-- rows injected by app.js -->
+        </tbody>
+      </table>
+
+      <div class="empty-state" id="empty-state" hidden>
+        <p>沒有符合條件的展覽。</p>
+      </div>
+
+      <div class="error-state" id="error-state" hidden>
+        <p id="error-text"></p>
+      </div>
+    </main>
+
+    <!-- ============ FOOTER ============ -->
+    <footer class="page-foot">
+      <p>
+        資料源 ·
+        <a id="notion-link" href="https://www.notion.so/87af4c274b834bc3b7018a4597f79153" target="_blank" rel="noopener">
+          Notion 展覽追蹤資料庫
+        </a>
+      </p>
+    </footer>
+  </div>
+
+  <script src="./app.js" defer></script>
+</body>
+</html>
