@@ -435,31 +435,31 @@ code {
   color: var(--ink-3);
 }
 
-.chip-industry-filter.active {
-  background: var(--accent-2);
-  border-color: var(--accent-2);
-  color: #fff;
+/* 未選中時：保持中性灰，跟其他 chip 一致 */
+.chip-industry-filter:hover {
+  border-color: var(--ink-3);
+  color: var(--ink-1);
 }
 
-/* 產業色 chip：未 active 時套產業專屬底色 */
-.chip-industry-filter.tag-c0:not(.active)  { background: #f0e0d0; color: #6b4520; border-color: #e0c8a8; }
-.chip-industry-filter.tag-c1:not(.active)  { background: #f5dac0; color: #8c4515; border-color: #e8c098; }
-.chip-industry-filter.tag-c2:not(.active)  { background: #f0e3b0; color: #6b5210; border-color: #ddca80; }
-.chip-industry-filter.tag-c3:not(.active)  { background: #d8e8d0; color: #305820; border-color: #b8d0a8; }
-.chip-industry-filter.tag-c4:not(.active)  { background: #c8e0d8; color: #20554a; border-color: #98c8b8; }
-.chip-industry-filter.tag-c5:not(.active)  { background: #d0e0e8; color: #1f4570; border-color: #a8c8d8; }
-.chip-industry-filter.tag-c6:not(.active)  { background: #d5d8e8; color: #2d3578; border-color: #b0b8d0; }
-.chip-industry-filter.tag-c7:not(.active)  { background: #e0d5e8; color: #503580; border-color: #c8b8d8; }
-.chip-industry-filter.tag-c8:not(.active)  { background: #f0d5dc; color: #803050; border-color: #e0b8c8; }
-.chip-industry-filter.tag-c9:not(.active)  { background: #f0d0c5; color: #803020; border-color: #e0b0a0; }
-.chip-industry-filter.tag-c10:not(.active) { background: #d8dde0; color: #2d3a45; border-color: #b8c0c8; }
-.chip-industry-filter.tag-c11:not(.active) { background: #e0e3c5; color: #4a5215; border-color: #c8cea0; }
-.chip-industry-filter.tag-c12:not(.active) { background: #ebd0d5; color: #80303d; border-color: #d8b0b8; }
-.chip-industry-filter.tag-c13:not(.active) { background: #d0e3d5; color: #2a5535; border-color: #a8c8b0; }
-.chip-industry-filter.tag-c14:not(.active) { background: #cad5e8; color: #2a3870; border-color: #a8b8d8; }
-.chip-industry-filter.tag-c15:not(.active) { background: #ede0a8; color: #5a4810; border-color: #d8c878; }
-.chip-industry-filter.tag-c16:not(.active) { background: #e8d8c0; color: #6a4818; border-color: #d0bc98; }
-.chip-industry-filter.tag-c17:not(.active) { background: #c8dcb8; color: #355020; border-color: #a8c490; }
+/* 選中時：顯示該產業專屬色（高彩度 + 較深邊框讓 active 狀態突出） */
+.chip-industry-filter.tag-c0.active  { background: #f0e0d0; color: #6b4520; border-color: #b08850; }
+.chip-industry-filter.tag-c1.active  { background: #f5dac0; color: #8c4515; border-color: #b87838; }
+.chip-industry-filter.tag-c2.active  { background: #f0e3b0; color: #6b5210; border-color: #ad8a30; }
+.chip-industry-filter.tag-c3.active  { background: #d8e8d0; color: #305820; border-color: #6a9050; }
+.chip-industry-filter.tag-c4.active  { background: #c8e0d8; color: #20554a; border-color: #5a8a78; }
+.chip-industry-filter.tag-c5.active  { background: #d0e0e8; color: #1f4570; border-color: #5078a0; }
+.chip-industry-filter.tag-c6.active  { background: #d5d8e8; color: #2d3578; border-color: #5a64a8; }
+.chip-industry-filter.tag-c7.active  { background: #e0d5e8; color: #503580; border-color: #7a5aa8; }
+.chip-industry-filter.tag-c8.active  { background: #f0d5dc; color: #803050; border-color: #a85878; }
+.chip-industry-filter.tag-c9.active  { background: #f0d0c5; color: #803020; border-color: #a85838; }
+.chip-industry-filter.tag-c10.active { background: #d8dde0; color: #2d3a45; border-color: #5a6878; }
+.chip-industry-filter.tag-c11.active { background: #e0e3c5; color: #4a5215; border-color: #788038; }
+.chip-industry-filter.tag-c12.active { background: #ebd0d5; color: #80303d; border-color: #a85868; }
+.chip-industry-filter.tag-c13.active { background: #d0e3d5; color: #2a5535; border-color: #5a8868; }
+.chip-industry-filter.tag-c14.active { background: #cad5e8; color: #2a3870; border-color: #5868a8; }
+.chip-industry-filter.tag-c15.active { background: #ede0a8; color: #5a4810; border-color: #98823a; }
+.chip-industry-filter.tag-c16.active { background: #e8d8c0; color: #6a4818; border-color: #a07840; }
+.chip-industry-filter.tag-c17.active { background: #c8dcb8; color: #355020; border-color: #608048; }
 
 /* ---------- Sort arrows on column headers ---------- */
 .th-label {
@@ -907,17 +907,17 @@ code {
 .modal-event-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
 .modal-event-meta-tag {
   display: inline-block;
-  padding: 1px 7px;
+  padding: 2px 9px;
   font-size: 10px;
   background: var(--bg);
   color: var(--ink-3);
   border: 1px solid var(--rule);
-  border-radius: 2px;
+  border-radius: 10px;
 }
 
 /* ---------- Calendar mobile ---------- */
@@ -1171,14 +1171,14 @@ code {
 /* Badges & tags */
 .tag {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 10px;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: 0.02em;
-  border-radius: 2px;
+  border-radius: 10px;
   background: var(--muted-bg);
   color: var(--ink-2);
-  margin: 1px 2px 1px 0;
+  margin: 2px 4px 2px 0;
   white-space: nowrap;
 }
 .tag-industry {
