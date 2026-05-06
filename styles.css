@@ -813,41 +813,42 @@ code {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  background: var(--rule-soft);
-  border: 1px solid var(--rule-soft);
+  background: var(--rule);
+  border: 1px solid var(--rule);
   border-radius: 2px;
   overflow: hidden;
 }
 
-/* 一週 = 一個獨立 grid */
+/* 一週 = 一個獨立 grid。gap + background 形成分隔線 */
 .cal-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   /* 6 個 row：日期數字 + 4 條事件 + +N */
   grid-template-rows: 22px repeat(4, 22px) 22px;
-  gap: 2px 1px;
-  padding: 2px;
-  background: var(--bg-soft);
+  gap: 1px;
+  background: var(--rule);
   min-height: 130px;
 }
 
-/* 背景格（純視覺底色，已不再可點） */
+/* 背景格（純視覺底色，已不再可點）
+ * 三階色差 — 邊界靠 .cal-week 的 gap 形成
+ *   本月平日：最白的米
+ *   本月週末：明顯較深的米色
+ *   非本月：更深的灰米色（一眼識別不是本月） */
 .cal-day-bg {
-  background: var(--bg-soft);
+  background: var(--bg-card);          /* 本月平日：最白 */
   z-index: 0;
-  border-radius: 1px;
-}
-.cal-day-bg.is-outside {
-  background: var(--bg);
-  opacity: 0.5;
 }
 .cal-day-bg.is-weekend {
-  background: var(--bg-card);
+  background: #ede4cd;                  /* 本月週末：深米色，跟平日有明顯落差 */
+}
+.cal-day-bg.is-outside {
+  background: #d8d0b8;                  /* 非本月：明顯灰米，一看就知道不是本月 */
 }
 .cal-day-bg.is-outside.is-weekend {
-  background: var(--bg);
+  background: #cec4a8;                  /* 非本月週末：再深一階 */
 }
-/* 今天：上緣磚紅 bar，無底色變化、無描邊（編輯雜誌風） */
+/* 今天：上緣磚紅 bar */
 .cal-day-bg.is-today {
   box-shadow: inset 0 3px 0 0 var(--accent);
 }
@@ -871,15 +872,15 @@ code {
   opacity: 0.5;
 }
 
-/* 休市標記：直接寫在日期數字旁的純文字（不加底色） */
+/* 休市標記：直接寫在日期數字旁的純文字（紅色強調，不加底色） */
 .cal-holiday-mark {
   display: inline-block;
   margin-left: 6px;
   font-family: var(--font-sans);
   font-size: 9px;
-  font-weight: 500;
+  font-weight: 600;
   letter-spacing: 0.04em;
-  color: var(--ink-3);
+  color: var(--accent);
   vertical-align: 1px;
 }
 
