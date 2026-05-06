@@ -609,8 +609,8 @@ code {
 }
 
 .cal-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 1px;
   background: var(--rule-soft);
   border: 1px solid var(--rule-soft);
@@ -618,108 +618,142 @@ code {
   overflow: hidden;
 }
 
-.cal-cell {
+/* 一週 = 一個獨立 grid */
+.cal-week {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  /* 6 個 row：日期數字 + 4 條事件 + +N */
+  grid-template-rows: 22px repeat(4, 22px) 22px;
+  gap: 2px 1px;
+  padding: 2px;
   background: var(--bg-soft);
   min-height: 130px;
-  padding: 6px 6px 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  font-size: 11px;
-  overflow: hidden;
 }
 
-.cal-cell.is-outside {
+/* 背景格（提供日期格的視覺底色與 click 區域） */
+.cal-day-bg {
+  background: var(--bg-soft);
+  cursor: pointer;
+  transition: background 0.12s ease;
+  z-index: 0;
+  border-radius: 1px;
+}
+.cal-day-bg:hover {
+  background: var(--bg);
+}
+.cal-day-bg.is-outside {
   background: var(--bg);
   opacity: 0.5;
 }
-
-.cal-cell.is-weekend {
+.cal-day-bg.is-weekend {
   background: var(--bg-card);
 }
-.cal-cell.is-outside.is-weekend {
+.cal-day-bg.is-outside.is-weekend {
   background: var(--bg);
 }
-
-.cal-cell.is-today {
+.cal-day-bg.is-today {
   background: var(--accent-soft);
   outline: 2px solid var(--accent);
   outline-offset: -2px;
   z-index: 1;
 }
+.cal-day-bg.is-today:hover {
+  background: var(--accent-soft);
+  filter: brightness(0.97);
+}
 
+/* 日期數字（覆蓋在 bg 之上，不接收點擊） */
 .cal-day-num {
   font-family: var(--font-mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--ink-2);
-  line-height: 1;
-  margin-bottom: 2px;
+  padding: 4px 0 0 6px;
+  z-index: 2;
+  pointer-events: none;
+  align-self: start;
 }
-.cal-cell.is-today .cal-day-num {
+.cal-day-num.is-today {
   color: var(--accent);
   font-weight: 700;
 }
-
-.cal-events {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-height: 0;
+.cal-day-num.is-outside {
+  opacity: 0.5;
 }
 
-.cal-event {
-  display: block;
-  padding: 2px 6px;
+/* 事件條（破格，跨多個 column） */
+.cal-event-bar {
+  display: flex;
+  align-items: center;
+  height: 20px;
+  margin: 1px 2px;
+  padding: 0 7px;
   font-size: 11px;
-  line-height: 1.3;
+  font-weight: 500;
+  line-height: 1;
   letter-spacing: 0.01em;
   color: #fff;
   background: var(--accent);
-  border-radius: 2px;
+  border-radius: 3px;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: opacity 0.15s ease;
+  z-index: 2;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  cursor: pointer;
 }
-
-.cal-event:hover {
-  opacity: 0.85;
+.cal-event-bar:hover {
+  opacity: 0.88;
   color: #fff;
   text-decoration: none;
+  transform: translateY(-1px);
 }
-
-.cal-event-exhibition {
-  background: var(--accent);
-}
-.cal-event-company {
+.cal-event-bar.is-company {
   background: var(--accent-4);
 }
+/* 跨週延續：左/右邊去圓角 + 視覺暗示 */
+.cal-event-bar.is-cont-start {
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  margin-left: 0;
+}
+.cal-event-bar.is-cont-end {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+  margin-right: 0;
+}
 
+/* +N 按鈕（每週每一日的最後一行） */
 .cal-overflow {
   font-size: 10px;
   color: var(--ink-2);
   font-family: var(--font-mono);
   font-weight: 600;
-  padding: 2px 6px;
-  background: var(--bg-card);
-  border: 1px dashed var(--rule);
+  padding: 2px 0;
+  margin: 0 2px;
+  background: transparent;
+  border: none;
   border-radius: 2px;
-  align-self: flex-start;
   cursor: pointer;
+  text-align: left;
+  z-index: 2;
+  align-self: end;
   transition: all 0.15s ease;
+  text-indent: 4px;
 }
 .cal-overflow:hover {
   background: var(--ink-1);
   color: var(--bg-soft);
-  border-color: var(--ink-1);
-  border-style: solid;
 }
 
 /* ---------- Day modal ---------- */
 .cal-day-modal {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
   border: none;
   border-radius: 8px;
   padding: 0;
@@ -868,13 +902,22 @@ code {
 
 /* ---------- Calendar mobile ---------- */
 @media (max-width: 720px) {
-  .cal-cell {
+  .cal-week {
+    grid-template-rows: 18px repeat(4, 18px) 18px;
     min-height: 90px;
-    padding: 4px 4px 6px;
+    gap: 1px;
   }
-  .cal-event {
+  .cal-event-bar {
+    height: 16px;
     font-size: 10px;
-    padding: 1px 4px;
+    padding: 0 4px;
+  }
+  .cal-day-num {
+    font-size: 10px;
+    padding: 2px 0 0 4px;
+  }
+  .cal-overflow {
+    font-size: 9px;
   }
   .cal-month-head {
     font-size: 18px;

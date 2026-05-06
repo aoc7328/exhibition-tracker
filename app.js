@@ -405,7 +405,7 @@ function sortByDate(rows) {
 }
 
 /* ---------- Calendar ---------- */
-const MAX_EVENTS_PER_CELL = 4;
+const MAX_VISIBLE_ROWS = 4; // 每週可見的事件 row 數，超過用 +N
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 
 function shiftCalendar(delta) {
@@ -427,47 +427,44 @@ function renderCalendar(events) {
     return { year: d.getFullYear(), month: d.getMonth() };
   })();
 
-  // 把每個事件展開到它涵蓋的所有日期
-  const eventsByDate = buildEventsByDate(events);
-  // 暫存到 state 給 modal 使用
-  state.calendar._eventsByDate = eventsByDate;
+  container.innerHTML = monthHtml(month, events);
 
-  container.innerHTML = monthHtml(month, eventsByDate);
-
-  // 綁定 +N 點擊（event delegation）
+  // 綁定 +N 點擊（顯示該日全部事件）
   container.querySelectorAll(".cal-overflow").forEach((btn) => {
     btn.addEventListener("click", (e) => {
       e.stopPropagation();
       const key = btn.dataset.day;
-      const dayEvents = eventsByDate.get(key) || [];
-      showDayModal(key, dayEvents);
+      showDayModal(key, eventsForDay(events, key));
+    });
+  });
+
+  // 綁定 cell 點擊（整個格子都可點，跳出當日 modal）
+  container.querySelectorAll(".cal-day-bg").forEach((cell) => {
+    cell.addEventListener("click", () => {
+      const key = cell.dataset.day;
+      showDayModal(key, eventsForDay(events, key));
+    });
+  });
+
+  // 綁定 event bar 點擊：阻止冒泡（避免同時觸發 cell 的 modal）
+  container.querySelectorAll(".cal-event-bar").forEach((bar) => {
+    bar.addEventListener("click", (e) => {
+      e.stopPropagation();
     });
   });
 }
 
-function buildEventsByDate(events) {
-  const map = new Map();
-  for (const exh of events) {
-    if (!exh.startDate) continue;
+function eventsForDay(events, dateKey) {
+  const target = new Date(dateKey);
+  target.setHours(0, 0, 0, 0);
+  return events.filter((exh) => {
+    if (!exh.startDate) return false;
     const start = new Date(exh.startDate);
-    const end = exh.endDate ? new Date(exh.endDate) : start;
-    if (isNaN(start) || isNaN(end)) continue;
-
-    // 從 start 走到 end，每天加一筆
-    const cursor = new Date(start);
-    cursor.setHours(0, 0, 0, 0);
-    const stop = new Date(end);
-    stop.setHours(0, 0, 0, 0);
-
-    let safety = 365; // 防呆：避免異常日期把瀏覽器卡死
-    while (cursor <= stop && safety-- > 0) {
-      const key = isoDate(cursor);
-      if (!map.has(key)) map.set(key, []);
-      map.get(key).push(exh);
-      cursor.setDate(cursor.getDate() + 1);
-    }
-  }
-  return map;
+    start.setHours(0, 0, 0, 0);
+    const end = exh.endDate ? new Date(exh.endDate) : new Date(exh.startDate);
+    end.setHours(0, 0, 0, 0);
+    return target >= start && target <= end;
+  });
 }
 
 function isoDate(d) {
@@ -477,35 +474,41 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
-function monthHtml({ year, month }, eventsByDate) {
-  const firstDay = new Date(year, month, 1);
-  const startWeekday = firstDay.getDay(); // 0 = 週日
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
+function monthHtml({ year, month }, allEvents) {
   const today = isoDate(new Date());
   const monthLabel = `${year} 年 ${month + 1} 月`;
 
-  // 6 列 × 7 欄，總共 42 格
-  const cells = [];
-
-  // 前面的空白（上個月的尾巴）
+  // 計算 42 天（6 週 × 7 天）
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
   const prevDays = new Date(year, month, 0).getDate();
+
+  const allDays = [];
   for (let i = startWeekday - 1; i >= 0; i--) {
-    const day = prevDays - i;
-    const d = new Date(year, month - 1, day);
-    cells.push(dayCellHtml(d, eventsByDate, today, true));
+    allDays.push({
+      date: new Date(year, month - 1, prevDays - i),
+      isOutside: true,
+    });
   }
-
-  // 本月的天
   for (let day = 1; day <= daysInMonth; day++) {
-    const d = new Date(year, month, day);
-    cells.push(dayCellHtml(d, eventsByDate, today, false));
+    allDays.push({
+      date: new Date(year, month, day),
+      isOutside: false,
+    });
+  }
+  while (allDays.length < 42) {
+    const offset = allDays.length - startWeekday - daysInMonth + 1;
+    allDays.push({
+      date: new Date(year, month + 1, offset),
+      isOutside: true,
+    });
   }
 
-  // 後面的空白（下個月的頭）填到 42 格
-  while (cells.length < 42) {
-    const dayOffset = cells.length - startWeekday - daysInMonth + 1;
-    const d = new Date(year, month + 1, dayOffset);
-    cells.push(dayCellHtml(d, eventsByDate, today, true));
+  // 6 週
+  const weeks = [];
+  for (let w = 0; w < 6; w++) {
+    weeks.push(allDays.slice(w * 7, (w + 1) * 7));
   }
 
   return `
@@ -518,50 +521,164 @@ function monthHtml({ year, month }, eventsByDate) {
         ).join("")}
       </div>
       <div class="cal-grid">
-        ${cells.join("")}
+        ${weeks.map((wk) => weekHtml(wk, allEvents, today)).join("")}
       </div>
     </div>
   `;
 }
 
-function dayCellHtml(d, eventsByDate, todayKey, isOutside) {
-  const key = isoDate(d);
-  const events = eventsByDate.get(key) || [];
-  const isToday = key === todayKey;
-  const weekday = d.getDay();
-  const isWeekend = weekday === 0 || weekday === 6;
+function weekHtml(weekDays, allEvents, todayKey) {
+  const weekStart = new Date(weekDays[0].date);
+  weekStart.setHours(0, 0, 0, 0);
+  const weekEnd = new Date(weekDays[6].date);
+  weekEnd.setHours(23, 59, 59, 999);
 
-  const classNames = [
-    "cal-cell",
-    isOutside ? "is-outside" : "",
+  // 收集這週覆蓋的事件
+  const weekEvents = [];
+  for (const exh of allEvents) {
+    if (!exh.startDate) continue;
+    const start = new Date(exh.startDate);
+    start.setHours(0, 0, 0, 0);
+    const end = exh.endDate ? new Date(exh.endDate) : new Date(exh.startDate);
+    end.setHours(23, 59, 59, 999);
+    if (end >= weekStart && start <= weekEnd) {
+      weekEvents.push({ exh, start, end });
+    }
+  }
+
+  // 排序：開始日早的優先；同天則跨日久的優先（讓長條排前面）
+  weekEvents.sort((a, b) => {
+    const startDiff = a.start - b.start;
+    if (startDiff !== 0) return startDiff;
+    const aDur = a.end - a.start;
+    const bDur = b.end - b.start;
+    return bDur - aDur;
+  });
+
+  // 計算每個事件在這週的 segment（startCol 0-6, endCol 0-6）
+  const segments = weekEvents.map(({ exh, start, end }) => {
+    const segStart = start < weekStart ? weekStart : start;
+    const segEnd = end > weekEnd ? weekEnd : end;
+    const startCol = segStart.getDay();
+    const endCol = segEnd.getDay();
+    return {
+      exh,
+      startCol,
+      endCol,
+      isContStart: start < weekStart, // 從上週延續來的
+      isContEnd: end > weekEnd,       // 延續到下週
+      row: -1,
+    };
+  });
+
+  // Greedy row 分配（不跨 row 重疊）
+  const rowOccupied = []; // rowOccupied[r] = [{startCol, endCol}, ...]
+  for (const seg of segments) {
+    let placedRow = -1;
+    for (let r = 0; r < rowOccupied.length; r++) {
+      const conflicts = rowOccupied[r].some(
+        (s) => !(seg.endCol < s.startCol || seg.startCol > s.endCol),
+      );
+      if (!conflicts) {
+        rowOccupied[r].push(seg);
+        placedRow = r;
+        break;
+      }
+    }
+    if (placedRow === -1) {
+      rowOccupied.push([seg]);
+      placedRow = rowOccupied.length - 1;
+    }
+    seg.row = placedRow;
+  }
+
+  // 計算每天的 overflow 數（被擠出 row 0..MAX-1 之外的事件數）
+  const overflowByCol = new Array(7).fill(0);
+  for (const seg of segments) {
+    if (seg.row >= MAX_VISIBLE_ROWS) {
+      for (let c = seg.startCol; c <= seg.endCol; c++) {
+        overflowByCol[c]++;
+      }
+    }
+  }
+
+  // 生成 HTML
+  // 每週一個 grid：7 columns × (1 + MAX_VISIBLE_ROWS + 1) rows
+  // row 1 = 日期數字、row 2..MAX+1 = 事件條、row MAX+2 = 「+N」
+  const dayBgCells = weekDays
+    .map((d, c) => dayBgCellHtml(d, todayKey, c))
+    .join("");
+  const dayNumCells = weekDays
+    .map((d, c) => dayNumCellHtml(d, c))
+    .join("");
+  const eventBars = segments
+    .filter((s) => s.row < MAX_VISIBLE_ROWS)
+    .map((s) => eventBarHtml(s))
+    .join("");
+  const overflowCells = weekDays
+    .map((d, c) => overflowCellHtml(d, overflowByCol[c], c))
+    .join("");
+
+  return `
+    <div class="cal-week">
+      ${dayBgCells}
+      ${dayNumCells}
+      ${eventBars}
+      ${overflowCells}
+    </div>
+  `;
+}
+
+function dayBgCellHtml(d, todayKey, col) {
+  const key = isoDate(d.date);
+  const isToday = key === todayKey;
+  const weekday = d.date.getDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+  const cls = [
+    "cal-day-bg",
+    d.isOutside ? "is-outside" : "",
     isToday ? "is-today" : "",
     isWeekend ? "is-weekend" : "",
   ]
     .filter(Boolean)
     .join(" ");
+  return `<div class="${cls}" data-day="${key}" style="grid-column: ${col + 1}; grid-row: 1 / -1"></div>`;
+}
 
-  const visible = events.slice(0, MAX_EVENTS_PER_CELL);
-  const overflow = events.length - visible.length;
+function dayNumCellHtml(d, col) {
+  const key = isoDate(d.date);
+  const today = isoDate(new Date());
+  const cls = [
+    "cal-day-num",
+    key === today ? "is-today" : "",
+    d.isOutside ? "is-outside" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1">${d.date.getDate()}</div>`;
+}
 
-  const eventChips = visible
-    .map((exh) => {
-      const cls = exh.isCompany ? "cal-event-company" : "cal-event-exhibition";
-      const url = exh.officialUrl || exh.notionUrl;
-      return `<a class="cal-event ${cls}" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="${escapeAttr(exh.name)}">${escapeHtml(exh.name)}</a>`;
-    })
-    .join("");
+function eventBarHtml(seg) {
+  const { exh, startCol, endCol, isContStart, isContEnd, row } = seg;
+  const cls = [
+    "cal-event-bar",
+    exh.isCompany ? "is-company" : "",
+    isContStart ? "is-cont-start" : "",
+    isContEnd ? "is-cont-end" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+  const span = endCol - startCol + 1;
+  const url = exh.officialUrl || exh.notionUrl;
+  const arrowLeft = isContStart ? "‹ " : "";
+  const arrowRight = isContEnd ? " ›" : "";
+  return `<a class="${cls}" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="${escapeAttr(exh.name)}" style="grid-column: ${startCol + 1} / span ${span}; grid-row: ${row + 2}">${arrowLeft}${escapeHtml(exh.name)}${arrowRight}</a>`;
+}
 
-  const overflowHtml =
-    overflow > 0
-      ? `<button class="cal-overflow" data-day="${key}" type="button">+${overflow} 更多</button>`
-      : "";
-
-  return `
-    <div class="${classNames}">
-      <div class="cal-day-num">${d.getDate()}</div>
-      <div class="cal-events">${eventChips}${overflowHtml}</div>
-    </div>
-  `;
+function overflowCellHtml(d, count, col) {
+  if (count <= 0) return "";
+  const key = isoDate(d.date);
+  return `<button class="cal-overflow" data-day="${key}" type="button" style="grid-column: ${col + 1}; grid-row: ${MAX_VISIBLE_ROWS + 2}">+${count}</button>`;
 }
 
 /* ---------- Day Modal（點 +N 展開該日全部事件） ---------- */
