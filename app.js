@@ -297,18 +297,22 @@ function render() {
     return;
   }
 
-  // 清單模式
+  // 清單模式：休市日只給月曆看，這裡濾掉
+  const listRows = rows.filter((e) => !e.isHoliday);
   tableEl.hidden = false;
   calendarEl.hidden = true;
 
-  if (rows.length === 0) {
+  if (listRows.length === 0) {
     tbody.innerHTML = "";
     emptyEl.hidden = false;
     return;
   }
   emptyEl.hidden = true;
 
-  tbody.innerHTML = rows.map(rowHtml).join("");
+  // 計數時也用實際顯示的數字
+  countEl.innerHTML = `共 <strong>${listRows.length}</strong> / ${state.exhibitions.length} 筆`;
+
+  tbody.innerHTML = listRows.map(rowHtml).join("");
 }
 
 function showError(msg) {
@@ -399,7 +403,10 @@ function matchesFilter(exh) {
   // Type filter（最前面的篩選）
   // exhibition：不含「企業」標籤 → 純商展（不論有無產業類別）
   // company：含「企業」標籤 → 法說會、月營收、年度發表會
-  if (state.filter.type === "exhibition") {
+  // 休市日不算商展也不算企業，永遠由月曆模式自己處理
+  if (exh.isHoliday) {
+    if (state.filter.type !== "all") return false;
+  } else if (state.filter.type === "exhibition") {
     if (exh.isCompany) return false;
   } else if (state.filter.type === "company") {
     if (!exh.isCompany) return false;
@@ -480,7 +487,11 @@ function renderCalendar(events) {
     return { year: d.getFullYear(), month: d.getMonth() };
   })();
 
-  container.innerHTML = monthHtml(month, events);
+  // 把休市日跟一般事件分開
+  const regularEvents = events.filter((e) => !e.isHoliday);
+  const holidayEvents = events.filter((e) => e.isHoliday);
+
+  container.innerHTML = monthHtml(month, regularEvents, holidayEvents);
 
   // 綁定 +N 點擊（顯示該日全部事件）
   container.querySelectorAll(".cal-overflow").forEach((btn) => {
@@ -528,7 +539,7 @@ function isoDate(d) {
   return `${y}-${m}-${day}`;
 }
 
-function monthHtml({ year, month }, allEvents) {
+function monthHtml({ year, month }, allEvents, holidayEvents = []) {
   const today = isoDate(new Date());
   const monthLabel = `${year} 年 ${month + 1} 月`;
 
@@ -575,17 +586,38 @@ function monthHtml({ year, month }, allEvents) {
         ).join("")}
       </div>
       <div class="cal-grid">
-        ${weeks.map((wk) => weekHtml(wk, allEvents, today)).join("")}
+        ${weeks.map((wk) => weekHtml(wk, allEvents, today, holidayEvents)).join("")}
       </div>
     </div>
   `;
 }
 
-function weekHtml(weekDays, allEvents, todayKey) {
+function weekHtml(weekDays, allEvents, todayKey, holidayEvents = []) {
   const weekStart = new Date(weekDays[0].date);
   weekStart.setHours(0, 0, 0, 0);
   const weekEnd = new Date(weekDays[6].date);
   weekEnd.setHours(23, 59, 59, 999);
+
+  // 計算每天的休市市場列表 { dateKey: ["美","台"] }
+  // 從事件的 location 推斷市場：「臺灣」→ 台、「世界」→ 美
+  const holidayByDay = new Map();
+  for (const exh of holidayEvents) {
+    if (!exh.startDate) continue;
+    const start = new Date(exh.startDate);
+    const end = exh.endDate ? new Date(exh.endDate) : new Date(exh.startDate);
+    if (end < weekStart || start > weekEnd) continue;
+    const market = exh.location === "臺灣" ? "台" : "美";
+    const cursor = new Date(Math.max(start.getTime(), weekStart.getTime()));
+    cursor.setHours(0, 0, 0, 0);
+    const stop = new Date(Math.min(end.getTime(), weekEnd.getTime()));
+    stop.setHours(0, 0, 0, 0);
+    while (cursor <= stop) {
+      const k = isoDate(cursor);
+      if (!holidayByDay.has(k)) holidayByDay.set(k, new Set());
+      holidayByDay.get(k).add(market);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
 
   // 收集這週覆蓋的事件
   const weekEvents = [];
@@ -663,7 +695,7 @@ function weekHtml(weekDays, allEvents, todayKey) {
     .map((d, c) => dayBgCellHtml(d, todayKey, c))
     .join("");
   const dayNumCells = weekDays
-    .map((d, c) => dayNumCellHtml(d, c))
+    .map((d, c) => dayNumCellHtml(d, c, holidayByDay))
     .join("");
   const eventBars = segments
     .filter((s) => s.row < MAX_VISIBLE_ROWS)
@@ -704,7 +736,7 @@ function dayBgCellHtml(d, todayKey, col) {
   return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1 / -1"></div>`;
 }
 
-function dayNumCellHtml(d, col) {
+function dayNumCellHtml(d, col, holidayByDay = new Map()) {
   const key = isoDate(d.date);
   const today = isoDate(new Date());
   const cls = [
@@ -714,14 +746,24 @@ function dayNumCellHtml(d, col) {
   ]
     .filter(Boolean)
     .join(" ");
-  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1">${d.date.getDate()}</div>`;
+
+  // 休市標記：臺/美/臺美
+  const markets = holidayByDay.get(key);
+  let holidayMark = "";
+  if (markets && markets.size > 0) {
+    // 排序：台在前、美在後
+    const sorted = ["台", "美"].filter((m) => markets.has(m));
+    holidayMark = `<span class="cal-holiday-mark">休市:${sorted.join("")}</span>`;
+  }
+
+  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1">${d.date.getDate()}${holidayMark}</div>`;
 }
 
 function eventBarHtml(seg) {
   const { exh, startCol, endCol, isContStart, isContEnd, row } = seg;
   const cls = [
     "cal-event-bar",
-    exh.isCompany ? "is-company" : "",
+    exh.isHolding ? "is-holding" : exh.isCompany ? "is-company" : "",
     isContStart ? "is-cont-start" : "",
     isContEnd ? "is-cont-end" : "",
   ]
@@ -764,11 +806,18 @@ function showDayModal(dateKey, events) {
   } else {
     eventsEl.innerHTML = events
       .map((exh) => {
-        const cls = exh.isCompany ? "modal-event-company" : "modal-event-exhibition";
+        const cls = exh.isHolding
+          ? "modal-event-holding"
+          : exh.isCompany
+            ? "modal-event-company"
+            : "modal-event-exhibition";
         const url = exh.officialUrl || exh.notionUrl;
-        const badge = exh.isCompany
-          ? `<span class="modal-event-badge">企業</span>`
-          : "";
+        let badge = "";
+        if (exh.isHolding) {
+          badge = `<span class="modal-event-badge modal-event-badge-holding">持股</span>`;
+        } else if (exh.isCompany) {
+          badge = `<span class="modal-event-badge">企業</span>`;
+        }
         const metaItems = [];
         if (exh.location) {
           metaItems.push(
@@ -873,10 +922,13 @@ function rowHtml(exh) {
 
 function nameCell(exh) {
   const url = exh.officialUrl || exh.notionUrl;
-  const companyBadge = exh.isCompany
-    ? `<span class="badge-company" title="企業相關事件">企業</span>`
-    : "";
-  const name = `<a class="cell-name" href="${escapeAttr(url)}" target="_blank" rel="noopener">${companyBadge}${escapeHtml(exh.name)}</a>`;
+  let badge = "";
+  if (exh.isHolding) {
+    badge = `<span class="badge-holding" title="持股相關事件">持股</span>`;
+  } else if (exh.isCompany) {
+    badge = `<span class="badge-company" title="企業相關事件">企業</span>`;
+  }
+  const name = `<a class="cell-name" href="${escapeAttr(url)}" target="_blank" rel="noopener">${badge}${escapeHtml(exh.name)}</a>`;
 
   let parts = [name];
   if (exh.organizer) {

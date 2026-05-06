@@ -20,6 +20,7 @@
 const DEFAULT_DATABASE_ID = "87af4c274b834bc3b7018a4597f79153";
 const NOTION_VERSION = "2022-06-28";
 const CORPORATE_LABEL = "企業";
+const HOLDING_LABEL = "持股";
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -81,10 +82,8 @@ async function writeMonthlyRevenue(token, dbId, ticker, name, industries) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  // 抓未來最近 2 筆月營收公布(每月 10 日)
-  // 台股季度法說會通常跟月營收合併,2 筆就夠覆蓋下一次重要事件
   const events = [];
-  for (let i = 0; events.length < 2 && i < 13; i++) {
+  for (let i = 0; i <= 12; i++) {
     const announceDate = new Date(today.getFullYear(), today.getMonth() + i, 10);
     if (announceDate < today) continue;
 
@@ -100,7 +99,7 @@ async function writeMonthlyRevenue(token, dbId, ticker, name, industries) {
     });
   }
 
-  const allIndustries = sortedUnique([CORPORATE_LABEL, ...industries]);
+  const allIndustries = sortedUnique([CORPORATE_LABEL, HOLDING_LABEL, ...industries]);
   const url = `https://mops.twse.com.tw/mops/web/t146sb05?co_id=${ticker}`;
 
   let written = 0;

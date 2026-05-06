@@ -871,6 +871,18 @@ code {
   opacity: 0.5;
 }
 
+/* 休市標記：直接寫在日期數字旁的純文字（不加底色） */
+.cal-holiday-mark {
+  display: inline-block;
+  margin-left: 6px;
+  font-family: var(--font-sans);
+  font-size: 9px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-3);
+  vertical-align: 1px;
+}
+
 /* 事件條（破格，跨多個 column） */
 .cal-event-bar {
   display: flex;
@@ -901,6 +913,9 @@ code {
 }
 .cal-event-bar.is-company {
   background: var(--accent-4);
+}
+.cal-event-bar.is-holding {
+  background: var(--accent-2);
 }
 /* 跨週延續：左/右邊去圓角 + 視覺暗示 */
 .cal-event-bar.is-cont-start {
@@ -1064,6 +1079,9 @@ code {
 .modal-event.modal-event-company {
   border-left-color: var(--accent-4);
 }
+.modal-event.modal-event-holding {
+  border-left-color: var(--accent-2);
+}
 
 .modal-event-head {
   display: flex;
@@ -1082,6 +1100,9 @@ code {
   color: #fff;
   border-radius: 3px;
   flex: 0 0 auto;
+}
+.modal-event-badge-holding {
+  background: var(--accent-2);
 }
 
 .modal-event-name {
@@ -1273,6 +1294,22 @@ code {
   font-weight: 700;
   letter-spacing: 0.1em;
   background: var(--accent-4);
+  color: #fff;
+  border-radius: 3px;
+  vertical-align: 2px;
+  text-decoration: none;
+  font-family: var(--font-sans);
+}
+
+/* 「持股」徽章：墨綠色，標記是用戶手動新增的持股事件 */
+.badge-holding {
+  display: inline-block;
+  padding: 1px 7px;
+  margin-right: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  background: var(--accent-2);
   color: #fff;
   border-radius: 3px;
   vertical-align: 2px;

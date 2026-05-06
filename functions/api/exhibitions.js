@@ -89,11 +89,22 @@ export async function onRequest(context) {
 function transformPage(page) {
   const p = page.properties || {};
 
-  // 拆分：「企業」標籤獨立成 isCompany；其餘為真正產業類別
-  const COMPANY_TAG = "\u4F01\u696D"; // 「企業」
+  // 多重標籤拆分：
+  // - 「企業」→ isCompany
+  // - 「持股」→ isHolding（用戶手動新增的台股月營收）
+  // - 「休市」→ isHoliday（美股/台股休市日）
+  // 其餘留在 industries 作為真正產業類別
+  const COMPANY_TAG = "\u4F01\u696D"; // 企業
+  const HOLDING_TAG = "\u6301\u80A1"; // 持股
+  const HOLIDAY_TAG = "\u4F11\u5E02"; // 休市
+
   const allTags = getMultiSelect(p["產業類別"]) || [];
   const isCompany = allTags.includes(COMPANY_TAG);
-  const industries = allTags.filter((t) => t !== COMPANY_TAG);
+  const isHolding = allTags.includes(HOLDING_TAG);
+  const isHoliday = allTags.includes(HOLIDAY_TAG);
+  const industries = allTags.filter(
+    (t) => t !== COMPANY_TAG && t !== HOLDING_TAG && t !== HOLIDAY_TAG,
+  );
 
   return {
     id: page.id,
@@ -107,6 +118,8 @@ function transformPage(page) {
     industries,
     industry: industries, // 向後相容
     isCompany,
+    isHolding,
+    isHoliday,
     confidence: getSelect(p["信心度"]),
     location: getSelect(p["地點"]),
     sourceLevel: getSelect(p["來源層次"]),
