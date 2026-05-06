@@ -81,8 +81,10 @@ async function writeMonthlyRevenue(token, dbId, ticker, name, industries) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
+  // 抓未來最近 2 筆月營收公布(每月 10 日)
+  // 台股季度法說會通常跟月營收合併,2 筆就夠覆蓋下一次重要事件
   const events = [];
-  for (let i = 0; i <= 12; i++) {
+  for (let i = 0; events.length < 2 && i < 13; i++) {
     const announceDate = new Date(today.getFullYear(), today.getMonth() + i, 10);
     if (announceDate < today) continue;
 
