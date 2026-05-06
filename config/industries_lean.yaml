@@ -81,7 +81,10 @@ industries:
       - Tesla AI Day
       - SpaceX Starship Update
       - OpenAI DevDay
-      - Anthropic Developer Conference
+      # Anthropic 巡迴系列 (Code with Claude),三場獨立列出避免 Claude 把日期合併
+      - Code with Claude SF
+      - Code with Claude London
+      - Code with Claude Tokyo
       # --- 台股龍頭(法說會;月營收由 scraper 生成,不在這)---
       - 台積電 2330 法說會
       - 台達電 2308 法說會
