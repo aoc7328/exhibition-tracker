@@ -84,6 +84,24 @@
       </div>
     </section>
 
+    <!-- ============ ADD TAIWAN COMPANY ============ -->
+    <section class="add-taiwan">
+      <details>
+        <summary>+ 新增追蹤台股公司(月營收)</summary>
+        <form id="add-taiwan-form" class="add-taiwan-form">
+          <input type="text" id="add-tw-ticker" placeholder="代號(例: 2454)" required>
+          <input type="text" id="add-tw-name" placeholder="公司名(例: 聯發科)" required>
+          <input type="text" id="add-tw-industries" placeholder="相關產業 空格分隔(例: AI 半導體 5G/6G)">
+          <button type="submit" class="btn btn-primary">加入並更新月營收</button>
+          <span id="add-tw-status" class="add-tw-status"></span>
+        </form>
+        <p class="add-taiwan-hint">
+          會立刻寫入 12 筆月營收(每月 10 日)+ 更新 yaml 加進長期追蹤清單。
+          季度法說會與 .ics 推送請本機跑 <code>add_taiwan_company.py</code> 或 <code>run_ics_only.bat</code>。
+        </p>
+      </details>
+    </section>
+
     <!-- ============ VIEW MODE TABS ============ -->
     <section class="view-mode">
       <div class="view-mode-tabs" role="tablist" aria-label="檢視模式">

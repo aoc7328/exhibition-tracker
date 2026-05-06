@@ -39,10 +39,63 @@ const state = {
 /* ---------- Boot ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   bindEvents();
+  bindAddTaiwanForm();
   fetchData();
   startPolling();
   startTicker();
 });
+
+/* ---------- Add Taiwan Company Form ---------- */
+function bindAddTaiwanForm() {
+  const form = document.getElementById("add-taiwan-form");
+  if (!form) return;
+  form.addEventListener("submit", onAddTaiwanSubmit);
+}
+
+async function onAddTaiwanSubmit(e) {
+  e.preventDefault();
+  const ticker = document.getElementById("add-tw-ticker").value.trim();
+  const name = document.getElementById("add-tw-name").value.trim();
+  const industriesStr = document.getElementById("add-tw-industries").value.trim();
+  const industries = industriesStr ? industriesStr.split(/\s+/).filter(Boolean) : [];
+  const statusEl = document.getElementById("add-tw-status");
+
+  if (!ticker || !name) {
+    statusEl.textContent = "請填代號與公司名";
+    statusEl.className = "add-tw-status is-error";
+    return;
+  }
+
+  statusEl.textContent = "處理中…";
+  statusEl.className = "add-tw-status is-loading";
+
+  try {
+    const resp = await fetch("/api/add-taiwan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ticker, name, industries }),
+    });
+    const data = await resp.json();
+
+    if (resp.ok && data.ok) {
+      statusEl.textContent = `✓ ${name} 加入成功,寫入 ${data.writtenMonthly} 筆月營收`;
+      statusEl.className = "add-tw-status is-success";
+      // 清空 form
+      document.getElementById("add-tw-ticker").value = "";
+      document.getElementById("add-tw-name").value = "";
+      document.getElementById("add-tw-industries").value = "";
+      // 重新拉資料顯示新加的公司
+      setTimeout(() => fetchData(true), 500);
+    } else {
+      const errs = [data.monthlyError, data.yamlError, data.error].filter(Boolean).join(" | ");
+      statusEl.textContent = `失敗:${errs || resp.status}`;
+      statusEl.className = "add-tw-status is-error";
+    }
+  } catch (err) {
+    statusEl.textContent = `錯誤:${err.message}`;
+    statusEl.className = "add-tw-status is-error";
+  }
+}
 
 /* ---------- Events ---------- */
 function bindEvents() {

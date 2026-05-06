@@ -1,36 +1,28 @@
 /**
- * Cloudflare Pages Function：/api/exhibitions
+ * Cloudflare Pages Function: api/exhibitions
  *
- * Notion 2025-09-03 API（data sources endpoint）。
+ * 代理 Notion API,讀取展覽追蹤資料庫並回傳乾淨的 JSON。
+ * NOTION_TOKEN 從 Cloudflare Pages 環境變數讀取。
  *
- * v2 變更：
- * - 新增 isCompany boolean（產業類別是否包含「企業」）
- * - 新增 industries array（過濾掉「企業」之後的真正產業類別）
- * - 同時保留 industry array 作向後相容
- *
- * 環境變數：
- *   NOTION_TOKEN              Notion Integration Token（必填）
- *   NOTION_DATA_SOURCE_ID     Notion data source ID（選填）
+ * 環境變數:
+ *   NOTION_TOKEN          Notion Integration Token(必填)
+ *   NOTION_DATABASE_ID    資料庫 ID(選填,預設展覽追蹤 DB)
  */
 
-const DEFAULT_DATA_SOURCE_ID = "f329eabe-5cb8-4f3e-af6f-5f722ab39d13";
-const NOTION_VERSION = "2025-09-03";
-const COMPANY_TAG = "\u4F01\u696D"; // 「企業」
+const DEFAULT_DATABASE_ID = "87af4c274b834bc3b7018a4597f79153";
+const NOTION_VERSION = "2022-06-28";
 
 export async function onRequest(context) {
   const { env } = context;
 
   const token = env.NOTION_TOKEN;
-  const dataSourceId =
-    env.NOTION_DATA_SOURCE_ID ||
-    env.NOTION_DATABASE_ID ||
-    DEFAULT_DATA_SOURCE_ID;
+  const databaseId = env.NOTION_DATABASE_ID || DEFAULT_DATABASE_ID;
 
   if (!token) {
     return jsonResponse(
       {
-        error: "NOTION_TOKEN not configured",
-        hint: "Set NOTION_TOKEN in Cloudflare Pages environment variables",
+        error: "NOTION_TOKEN 未設定",
+        hint: "請在 Cloudflare Pages 專案 Settings → Environment variables 設定 NOTION_TOKEN",
       },
       500,
     );
@@ -38,14 +30,18 @@ export async function onRequest(context) {
 
   try {
     const allResults = [];
-    let cursor = undefined;
+    let cursor;
 
+    // Notion API 一次最多 100 筆,paginate 取完
     do {
-      const body = { page_size: 100 };
+      const body = {
+        page_size: 100,
+        sorts: [{ property: "開始日期", direction: "ascending" }],
+      };
       if (cursor) body.start_cursor = cursor;
 
       const resp = await fetch(
-        `https://api.notion.com/v1/data_sources/${dataSourceId}/query`,
+        `https://api.notion.com/v1/databases/${databaseId}/query`,
         {
           method: "POST",
           headers: {
@@ -61,7 +57,7 @@ export async function onRequest(context) {
         const text = await resp.text();
         return jsonResponse(
           {
-            error: `Notion API responded ${resp.status}`,
+            error: `Notion API 失敗 ${resp.status}`,
             detail: safeParse(text),
           },
           502,
@@ -73,9 +69,7 @@ export async function onRequest(context) {
       cursor = data.has_more ? data.next_cursor : undefined;
     } while (cursor);
 
-    const exhibitions = allResults
-      .map(transformPage)
-      .sort(sortByStartDate);
+    const exhibitions = allResults.map(transformPage);
 
     return jsonResponse({
       exhibitions,
@@ -84,7 +78,7 @@ export async function onRequest(context) {
     });
   } catch (err) {
     return jsonResponse(
-      { error: err?.message || "Unknown error" },
+      { error: err?.message || "未知錯誤" },
       500,
     );
   }
@@ -95,40 +89,25 @@ export async function onRequest(context) {
 function transformPage(page) {
   const p = page.properties || {};
 
-  // 「產業類別」這個欄位名 Notion 上可能用「產」(U+7522) 或「産」(U+7523)，兩個都試
-  const INDUSTRY_KEYS = ["\u7522\u696D\u985E\u5225", "\u7523\u696D\u985E\u5225", "Industry"];
-  const allTags = getMultiSelect(findProp(p, INDUSTRY_KEYS)) || [];
-  // 拆分：「企業」獨立成 isCompany；其餘為真正產業類別
-  const isCompany = allTags.includes(COMPANY_TAG);
-  const industries = allTags.filter((t) => t !== COMPANY_TAG);
-
   return {
     id: page.id,
     notionUrl: page.url,
-    name: getTitle(findProp(p, ["展覽名稱", "Name", "Title"])),
-    startDate: getDateStart(findProp(p, ["開始日期", "Start", "Start Date"])),
+    name: getTitle(p["展覽名稱"]),
+    startDate: getDateStart(p["開始日期"]),
     endDate:
-      getDateEnd(findProp(p, ["結束日期", "End", "End Date"])) ||
-      getDateStart(findProp(p, ["結束日期", "End", "End Date"])),
-    industries,
-    industry: industries, // 向後相容
-    isCompany,
-    confidence: getSelect(findProp(p, ["信心度", "Confidence"])),
-    location: getSelect(findProp(p, ["地點", "Location"])),
-    sourceLevel: getSelect(findProp(p, ["來源層次", "Source"])),
-    organizer: getRichText(findProp(p, ["主辦單位", "Organizer"])),
-    officialUrl: getUrl(findProp(p, ["官方網址", "URL", "Website"])),
-    relatedStocks: getRichText(findProp(p, ["相關個股", "Stocks"])),
-    status: getSelect(findProp(p, ["狀態", "Status"])),
+      getDateEnd(p["開始日期"]) ||
+      getDateStart(p["結束日期"]) ||
+      getDateStart(p["開始日期"]),
+    industry: getMultiSelect(p["產業類別"]),
+    confidence: getSelect(p["信心度"]),
+    location: getSelect(p["地點"]),
+    sourceLevel: getSelect(p["來源層次"]),
+    organizer: getRichText(p["主辦單位"]),
+    officialUrl: getUrl(p["官方網址"]),
+    relatedStocks: getRichText(p["相關個股"]),
+    status: getSelect(p["狀態"]),
     lastEdited: page.last_edited_time,
   };
-}
-
-function findProp(props, names) {
-  for (const n of names) {
-    if (props[n] !== undefined) return props[n];
-  }
-  return undefined;
 }
 
 function getTitle(prop) {
@@ -159,12 +138,6 @@ function getDateEnd(prop) {
 
 function getUrl(prop) {
   return prop?.url || "";
-}
-
-function sortByStartDate(a, b) {
-  const aDate = a.startDate || "9999-12-31";
-  const bDate = b.startDate || "9999-12-31";
-  return aDate.localeCompare(bDate);
 }
 
 function safeParse(text) {
