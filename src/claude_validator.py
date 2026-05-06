@@ -68,9 +68,10 @@ def _program_sanity_check(
         return False, "結束日早於開始日"
     if end < today:
         return False, "活動已結束"
-    # 展期合理性:展覽通常 1-7 天、財報 1 天、發表會 1-3 天。> 7 天必為 Claude 抓錯
+    # 展期合理性:大部分展覽 ≤ 7 天,大型國際車展(Auto Shanghai/北京車展/Detroit
+    # Auto Show)實際 9~11 天屬正常範圍,> 14 天必為 Claude 把多個活動串在一起
     duration_days = (end - start).days
-    if duration_days > 7:
+    if duration_days > 14:
         return False, f"展期過長 ({duration_days} 天),可能誤把多個獨立活動的日期串在一起"
     return True, ""
 
