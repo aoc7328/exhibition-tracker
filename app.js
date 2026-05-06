@@ -87,7 +87,7 @@ async function onAddTaiwanSubmit(e) {
       // 重新拉資料顯示新加的公司
       setTimeout(() => fetchData(true), 500);
     } else {
-      const errs = [data.monthlyError, data.yamlError, data.error].filter(Boolean).join(" | ");
+      const errs = [data.monthlyError, data.error].filter(Boolean).join(" | ");
       statusEl.textContent = `失敗:${errs || resp.status}`;
       statusEl.className = "add-tw-status is-error";
     }
