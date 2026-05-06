@@ -28,7 +28,7 @@ from src.notion_writer import (  # noqa: E402
 
 logger = get_logger(__name__)
 
-MAX_DURATION_DAYS = 14
+MAX_DURATION_DAYS = 7
 
 
 def list_all_pages() -> list[dict[str, Any]]:
