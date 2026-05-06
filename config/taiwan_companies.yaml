@@ -1,0 +1,25 @@
+# 追蹤的台股公司清單(月營收 + 季度法說 + cross-tag 產業)
+#
+# 改動後自動發生:
+#   1. 月營收 generator 用新清單(每月 10 日)
+#   2. 法說會 entries 自動 inject 進 industries_lean.yaml 的「企業」類別,Claude 查精確日期
+#   3. Notion 寫入時自動帶 ["企業", *extra_industries] cross-tag
+#
+# 增刪公司:用 scripts/add_taiwan_company.py 命令,或直接編輯這個檔案
+
+companies:
+  - ticker: "2330"
+    name: 台積電
+    extra_industries: [半導體]
+
+  - ticker: "2308"
+    name: 台達電
+    extra_industries: [電源, 散熱, 車用電子]
+
+  - ticker: "2454"
+    name: 聯發科
+    extra_industries: [AI, 半導體, 5G/6G]
+
+  - ticker: "2317"
+    name: 鴻海
+    extra_industries: [車用電子, 消費電子, AI]

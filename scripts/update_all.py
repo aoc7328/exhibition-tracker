@@ -52,8 +52,8 @@ logger = get_logger(__name__)
 
 CORPORATE_LABEL = "企業"
 
-# 公司前綴 → 相關產業 tag(寫入 Notion 時自動加上「企業」+ 這些)
-COMPANY_TAGS: dict[str, list[str]] = {
+# 美股龍頭 — 寫死 mapping
+HARDCODED_COMPANY_TAGS: dict[str, list[str]] = {
     "Apple": ["消費電子"],
     "Alphabet": ["AI"],
     "Google": ["AI", "消費電子"],
@@ -70,20 +70,33 @@ COMPANY_TAGS: dict[str, list[str]] = {
     "Anthropic": ["AI"],
     "Broadcom": ["AI", "半導體", "5G/6G", "光通訊"],
     "AVGO": ["AI", "半導體", "5G/6G", "光通訊"],
-    "台積電": ["半導體"],
-    "2330": ["半導體"],
-    "台達電": ["電源", "散熱", "車用電子"],
-    "2308": ["電源", "散熱", "車用電子"],
-    "聯發科": ["AI", "半導體", "5G/6G"],
-    "2454": ["AI", "半導體", "5G/6G"],
-    "鴻海": ["車用電子", "消費電子", "AI"],
-    "2317": ["車用電子", "消費電子", "AI"],
 }
+
+
+def _load_taiwan_company_tags() -> dict[str, list[str]]:
+    """台股公司 mapping 從 config/taiwan_companies.yaml 動態讀(支援增刪)"""
+    from src.scrapers.taiwan_monthly import load_companies
+
+    tags: dict[str, list[str]] = {}
+    for c in load_companies():
+        ticker = c.get("ticker", "")
+        name = c.get("name", "")
+        extras = c.get("extra_industries") or []
+        if ticker:
+            tags[ticker] = extras
+        if name:
+            tags[name] = extras
+    return tags
 
 
 def _company_extra_industries(name: str) -> list[str]:
     """根據展名前綴判斷公司,回傳 extra industries"""
-    for prefix, industries in COMPANY_TAGS.items():
+    # 先查台股 yaml(動態)
+    for prefix, industries in _load_taiwan_company_tags().items():
+        if prefix in name:
+            return industries
+    # 再查美股 hardcoded
+    for prefix, industries in HARDCODED_COMPANY_TAGS.items():
         if prefix in name:
             return industries
     return []
@@ -308,6 +321,18 @@ def run_layer2(
             logger.warning(f"找不到產業: {industry_filter}")
             return
         logger.info(f"只跑指定產業: {industry_filter}")
+
+    # 動態 inject 台股法說會 entries 進「企業」類別
+    from src.scrapers.taiwan_monthly import load_companies
+    taiwan_companies = load_companies()
+    for ind in industries:
+        if ind.get("name") == CORPORATE_LABEL and taiwan_companies:
+            existing_known = ind.setdefault("known_exhibitions", []) or []
+            for c in taiwan_companies:
+                meeting_name = f"{c['name']} {c['ticker']} 法說會"
+                if meeting_name not in existing_known:
+                    existing_known.append(meeting_name)
+            ind["known_exhibitions"] = existing_known
 
     for ind in industries:
         name = ind["name"]

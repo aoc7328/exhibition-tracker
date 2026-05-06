@@ -31,7 +31,7 @@ logger = get_logger(__name__)
 
 CORPORATE_LABEL = "企業"
 
-COMPANY_TAGS: dict[str, list[str]] = {
+HARDCODED_COMPANY_TAGS: dict[str, list[str]] = {
     "Apple": ["消費電子"],
     "Alphabet": ["AI"],
     "Google": ["AI", "消費電子"],
@@ -48,19 +48,30 @@ COMPANY_TAGS: dict[str, list[str]] = {
     "Anthropic": ["AI"],
     "Broadcom": ["AI", "半導體", "5G/6G", "光通訊"],
     "AVGO": ["AI", "半導體", "5G/6G", "光通訊"],
-    "台積電": ["半導體"],
-    "2330": ["半導體"],
-    "台達電": ["電源", "散熱", "車用電子"],
-    "2308": ["電源", "散熱", "車用電子"],
-    "聯發科": ["AI", "半導體", "5G/6G"],
-    "2454": ["AI", "半導體", "5G/6G"],
-    "鴻海": ["車用電子", "消費電子", "AI"],
-    "2317": ["車用電子", "消費電子", "AI"],
 }
 
 
+def _load_taiwan_company_tags() -> dict[str, list[str]]:
+    """從 taiwan_companies.yaml 動態載入"""
+    from src.scrapers.taiwan_monthly import load_companies
+
+    tags: dict[str, list[str]] = {}
+    for c in load_companies():
+        ticker = c.get("ticker", "")
+        name = c.get("name", "")
+        extras = c.get("extra_industries") or []
+        if ticker:
+            tags[ticker] = extras
+        if name:
+            tags[name] = extras
+    return tags
+
+
 def _company_extra_industries(name: str) -> list[str]:
-    for prefix, industries in COMPANY_TAGS.items():
+    for prefix, industries in _load_taiwan_company_tags().items():
+        if prefix in name:
+            return industries
+    for prefix, industries in HARDCODED_COMPANY_TAGS.items():
         if prefix in name:
             return industries
     return []

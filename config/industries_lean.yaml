@@ -85,11 +85,8 @@ industries:
       - Code with Claude SF
       - Code with Claude London
       - Code with Claude Tokyo
-      # --- 台股龍頭(法說會;月營收由 scraper 生成,不在這)---
-      - 台積電 2330 法說會
-      - 台達電 2308 法說會
-      - 聯發科 2454 法說會
-      - 鴻海 2317 法說會
+      # 台股龍頭法說會由 update_all 從 config/taiwan_companies.yaml 動態 inject
+      # 月營收由 src/scrapers/taiwan_monthly.py 從同一個 yaml 動態生成
 
   # ============================================================
   # 臺灣專屬(同完整版)
