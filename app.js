@@ -702,14 +702,23 @@ function showDayModal(dateKey, events) {
         const badge = exh.isCompany
           ? `<span class="modal-event-badge">企業</span>`
           : "";
-        const meta = [
-          exh.location,
-          exh.status,
-          ...(exh.industries || exh.industry || []),
-        ]
-          .filter(Boolean)
-          .map((t) => `<span class="modal-event-meta-tag">${escapeHtml(t)}</span>`)
-          .join("");
+        const metaItems = [];
+        if (exh.location) {
+          metaItems.push(
+            `<span class="modal-event-meta-tag">${escapeHtml(exh.location)}</span>`,
+          );
+        }
+        if (exh.status) {
+          metaItems.push(
+            `<span class="modal-event-meta-tag">${escapeHtml(exh.status)}</span>`,
+          );
+        }
+        for (const ind of exh.industries || exh.industry || []) {
+          metaItems.push(
+            `<span class="modal-event-meta-tag ${industryColorClass(ind)}">${escapeHtml(ind)}</span>`,
+          );
+        }
+        const meta = metaItems.join("");
         const dateRange =
           exh.endDate && exh.endDate !== exh.startDate
             ? `${formatDate(exh.startDate)} – ${formatDate(exh.endDate)}`
@@ -834,7 +843,12 @@ function industryCell(exh) {
   // 用 industries（已過濾掉「企業」），避免重複顯示
   const items = exh.industries || exh.industry || [];
   if (items.length === 0) return `<span class="tag tag-empty">—</span>`;
-  return items.map((s) => `<span class="tag tag-industry">${escapeHtml(s)}</span>`).join("");
+  return items
+    .map(
+      (s) =>
+        `<span class="tag tag-industry ${industryColorClass(s)}">${escapeHtml(s)}</span>`,
+    )
+    .join("");
 }
 
 function locationCell(exh) {
@@ -883,6 +897,22 @@ async function onCopy() {
 }
 
 /* ---------- Util ---------- */
+
+// 字串穩定 hash（Java String.hashCode 風格），對短中文字串較分散
+function hashString(s) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = (Math.imul(31, h) + s.charCodeAt(i)) | 0;
+  }
+  return Math.abs(h);
+}
+
+// 給定產業名稱回傳穩定的顏色 class（18 色 palette）
+function industryColorClass(name) {
+  if (!name) return "";
+  return `tag-c${hashString(name) % 18}`;
+}
+
 function escapeHtml(s) {
   return String(s ?? "")
     .replaceAll("&", "&amp;")
