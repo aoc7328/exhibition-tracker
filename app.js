@@ -325,7 +325,7 @@ function setupIndustryChips() {
   const otherBtns = sorted
     .map(
       (ind) =>
-        `<button class="chip chip-industry-filter${
+        `<button class="chip chip-industry-filter ${industryColorClass(ind)}${
           state.filter.industry === ind ? " active" : ""
         }" data-filter-industry="${escapeAttr(ind)}">${escapeHtml(ind)}</button>`,
     )

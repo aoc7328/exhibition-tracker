@@ -441,6 +441,26 @@ code {
   color: #fff;
 }
 
+/* 產業色 chip：未 active 時套產業專屬底色 */
+.chip-industry-filter.tag-c0:not(.active)  { background: #f0e0d0; color: #6b4520; border-color: #e0c8a8; }
+.chip-industry-filter.tag-c1:not(.active)  { background: #f5dac0; color: #8c4515; border-color: #e8c098; }
+.chip-industry-filter.tag-c2:not(.active)  { background: #f0e3b0; color: #6b5210; border-color: #ddca80; }
+.chip-industry-filter.tag-c3:not(.active)  { background: #d8e8d0; color: #305820; border-color: #b8d0a8; }
+.chip-industry-filter.tag-c4:not(.active)  { background: #c8e0d8; color: #20554a; border-color: #98c8b8; }
+.chip-industry-filter.tag-c5:not(.active)  { background: #d0e0e8; color: #1f4570; border-color: #a8c8d8; }
+.chip-industry-filter.tag-c6:not(.active)  { background: #d5d8e8; color: #2d3578; border-color: #b0b8d0; }
+.chip-industry-filter.tag-c7:not(.active)  { background: #e0d5e8; color: #503580; border-color: #c8b8d8; }
+.chip-industry-filter.tag-c8:not(.active)  { background: #f0d5dc; color: #803050; border-color: #e0b8c8; }
+.chip-industry-filter.tag-c9:not(.active)  { background: #f0d0c5; color: #803020; border-color: #e0b0a0; }
+.chip-industry-filter.tag-c10:not(.active) { background: #d8dde0; color: #2d3a45; border-color: #b8c0c8; }
+.chip-industry-filter.tag-c11:not(.active) { background: #e0e3c5; color: #4a5215; border-color: #c8cea0; }
+.chip-industry-filter.tag-c12:not(.active) { background: #ebd0d5; color: #80303d; border-color: #d8b0b8; }
+.chip-industry-filter.tag-c13:not(.active) { background: #d0e3d5; color: #2a5535; border-color: #a8c8b0; }
+.chip-industry-filter.tag-c14:not(.active) { background: #cad5e8; color: #2a3870; border-color: #a8b8d8; }
+.chip-industry-filter.tag-c15:not(.active) { background: #ede0a8; color: #5a4810; border-color: #d8c878; }
+.chip-industry-filter.tag-c16:not(.active) { background: #e8d8c0; color: #6a4818; border-color: #d0bc98; }
+.chip-industry-filter.tag-c17:not(.active) { background: #c8dcb8; color: #355020; border-color: #a8c490; }
+
 /* ---------- Sort arrows on column headers ---------- */
 .th-label {
   margin-right: 4px;
@@ -1166,6 +1186,26 @@ code {
   color: var(--ink-2);
   border: 1px solid var(--rule);
 }
+
+/* 套色版（更高 specificity 確保贏過 .tag-industry 的灰色預設） */
+.tag-industry.tag-c0  { background: #f0e0d0; color: #6b4520; border-color: #e0c8a8; }
+.tag-industry.tag-c1  { background: #f5dac0; color: #8c4515; border-color: #e8c098; }
+.tag-industry.tag-c2  { background: #f0e3b0; color: #6b5210; border-color: #ddca80; }
+.tag-industry.tag-c3  { background: #d8e8d0; color: #305820; border-color: #b8d0a8; }
+.tag-industry.tag-c4  { background: #c8e0d8; color: #20554a; border-color: #98c8b8; }
+.tag-industry.tag-c5  { background: #d0e0e8; color: #1f4570; border-color: #a8c8d8; }
+.tag-industry.tag-c6  { background: #d5d8e8; color: #2d3578; border-color: #b0b8d0; }
+.tag-industry.tag-c7  { background: #e0d5e8; color: #503580; border-color: #c8b8d8; }
+.tag-industry.tag-c8  { background: #f0d5dc; color: #803050; border-color: #e0b8c8; }
+.tag-industry.tag-c9  { background: #f0d0c5; color: #803020; border-color: #e0b0a0; }
+.tag-industry.tag-c10 { background: #d8dde0; color: #2d3a45; border-color: #b8c0c8; }
+.tag-industry.tag-c11 { background: #e0e3c5; color: #4a5215; border-color: #c8cea0; }
+.tag-industry.tag-c12 { background: #ebd0d5; color: #80303d; border-color: #d8b0b8; }
+.tag-industry.tag-c13 { background: #d0e3d5; color: #2a5535; border-color: #a8c8b0; }
+.tag-industry.tag-c14 { background: #cad5e8; color: #2a3870; border-color: #a8b8d8; }
+.tag-industry.tag-c15 { background: #ede0a8; color: #5a4810; border-color: #d8c878; }
+.tag-industry.tag-c16 { background: #e8d8c0; color: #6a4818; border-color: #d0bc98; }
+.tag-industry.tag-c17 { background: #c8dcb8; color: #355020; border-color: #a8c490; }
 .tag-location-tw {
   background: #dde7d8;
   color: var(--accent-2);
