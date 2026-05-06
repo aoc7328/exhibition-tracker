@@ -326,6 +326,183 @@ code {
   border-color: var(--ok);
 }
 
+/* ---------- Add Taiwan Company panel ---------- */
+.add-taiwan {
+  margin-bottom: 14px;
+}
+
+.add-taiwan-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.18s ease;
+}
+
+.add-taiwan-panel[open] {
+  border-color: var(--ink-3);
+}
+
+/* Summary（摺疊狀態的 header） */
+.add-taiwan-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink-2);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.add-taiwan-summary::-webkit-details-marker {
+  display: none;
+}
+
+.add-taiwan-summary:hover {
+  background: var(--bg);
+  color: var(--ink-1);
+}
+
+.add-taiwan-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--ink-1);
+  color: var(--bg-soft);
+  flex: 0 0 auto;
+}
+
+.add-taiwan-chevron {
+  margin-left: auto;
+  color: var(--ink-3);
+  transition: transform 0.2s ease;
+}
+
+.add-taiwan-panel[open] .add-taiwan-chevron {
+  transform: rotate(180deg);
+}
+
+/* Form 展開區 */
+.add-taiwan-form {
+  padding: 14px 16px 16px;
+  border-top: 1px solid var(--rule-soft);
+  background: var(--bg-soft);
+}
+
+.add-taiwan-grid {
+  display: grid;
+  grid-template-columns: 120px 160px 1fr;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.add-taiwan-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.add-taiwan-field-wide {
+  /* 第三欄佔滿剩餘 */
+}
+
+.add-taiwan-field-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--ink-3);
+  text-transform: uppercase;
+}
+
+.add-taiwan-field-label em {
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  color: var(--ink-4);
+  text-transform: none;
+}
+
+.add-taiwan-field input {
+  padding: 7px 11px;
+  font: inherit;
+  font-size: 13px;
+  color: var(--ink-1);
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  transition: border-color 0.15s ease, background 0.15s ease;
+  width: 100%;
+}
+
+.add-taiwan-field input:focus {
+  outline: none;
+  border-color: var(--ink-1);
+  background: #fff;
+}
+
+.add-taiwan-field input::placeholder {
+  color: var(--ink-4);
+}
+
+/* 提交區 */
+.add-taiwan-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.add-taiwan-submit {
+  flex: 0 0 auto;
+}
+
+.add-tw-status {
+  font-size: 12px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  letter-spacing: 0.02em;
+}
+
+.add-tw-status.is-loading {
+  color: var(--warn);
+}
+
+.add-tw-status.is-success {
+  color: var(--ok);
+  font-weight: 500;
+}
+
+.add-tw-status.is-error {
+  color: var(--danger);
+  font-weight: 500;
+}
+
+.add-taiwan-hint {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--rule);
+  font-size: 11px;
+  color: var(--ink-3);
+  letter-spacing: 0.02em;
+}
+
+/* Mobile */
+@media (max-width: 720px) {
+  .add-taiwan-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+}
+
 /* ---------- Filters ---------- */
 .filters {
   display: flex;
@@ -432,13 +609,17 @@ code {
 .chip-industry-filter {
   font-size: 11px;
   padding: 4px 10px;
+  /* 明確覆蓋 base：未選時永遠是中性灰、無底色 */
+  background: transparent;
   color: var(--ink-3);
+  border-color: var(--rule);
 }
 
 /* 未選中時：保持中性灰，跟其他 chip 一致 */
 .chip-industry-filter:hover {
   border-color: var(--ink-3);
   color: var(--ink-1);
+  background: transparent;
 }
 
 /* 選中時：顯示該產業專屬色（高彩度 + 較深邊框讓 active 狀態突出） */

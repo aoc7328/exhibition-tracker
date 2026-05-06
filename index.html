@@ -86,19 +86,44 @@
 
     <!-- ============ ADD TAIWAN COMPANY ============ -->
     <section class="add-taiwan">
-      <details>
-        <summary>+ 新增追蹤台股公司(月營收)</summary>
+      <details class="add-taiwan-panel">
+        <summary class="add-taiwan-summary">
+          <span class="add-taiwan-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </span>
+          <span>新增追蹤台股月營收</span>
+          <span class="add-taiwan-chevron" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="14" height="14">
+              <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </span>
+        </summary>
+
         <form id="add-taiwan-form" class="add-taiwan-form">
-          <input type="text" id="add-tw-ticker" placeholder="代號(例: 2454)" required>
-          <input type="text" id="add-tw-name" placeholder="公司名(例: 聯發科)" required>
-          <input type="text" id="add-tw-industries" placeholder="相關產業 空格分隔(例: AI 半導體 5G/6G)">
-          <button type="submit" class="btn btn-primary">加入並更新月營收</button>
-          <span id="add-tw-status" class="add-tw-status"></span>
+          <div class="add-taiwan-grid">
+            <label class="add-taiwan-field">
+              <span class="add-taiwan-field-label">代號</span>
+              <input type="text" id="add-tw-ticker" placeholder="例：2454" required>
+            </label>
+            <label class="add-taiwan-field">
+              <span class="add-taiwan-field-label">公司名</span>
+              <input type="text" id="add-tw-name" placeholder="例:聯發科" required>
+            </label>
+            <label class="add-taiwan-field add-taiwan-field-wide">
+              <span class="add-taiwan-field-label">相關產業 <em>(空格分隔,選填)</em></span>
+              <input type="text" id="add-tw-industries" placeholder="例:AI 半導體 5G/6G">
+            </label>
+          </div>
+
+          <div class="add-taiwan-actions">
+            <button type="submit" class="btn btn-primary add-taiwan-submit">加入並更新月營收</button>
+            <span id="add-tw-status" class="add-tw-status"></span>
+          </div>
+
+          <p class="add-taiwan-hint">寫入 12 筆月營收（每月 10 日）到 Notion。</p>
         </form>
-        <p class="add-taiwan-hint">
-          只寫入 12 筆月營收(每月 10 日)到 Notion,不加進長期追蹤清單。
-          需要近一兩次的正式法說會請本機跑 <code>add_taiwan_company.py</code>,.ics 推送跑 <code>run_ics_only.bat</code>。
-        </p>
       </details>
     </section>
 
