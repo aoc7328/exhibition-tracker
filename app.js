@@ -28,6 +28,12 @@ const state = {
     direction: "asc", // asc | desc
   },
   knownIndustries: [], // 記錄已渲染過的產業列表，避免每次資料更新都重生 chip
+  viewMode: "list", // list | calendar
+  calendar: {
+    // 中央顯示的月份（{ year, month } where month is 0-indexed）
+    centerYear: new Date().getFullYear(),
+    centerMonth: new Date().getMonth(),
+  },
 };
 
 /* ---------- Boot ---------- */
@@ -88,12 +94,42 @@ function bindEvents() {
     });
   });
 
+  // View mode tabs（清單 / 月曆）
+  document.querySelectorAll("[data-view-mode]").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.viewMode = btn.dataset.viewMode;
+      document.querySelectorAll("[data-view-mode]").forEach((b) => {
+        const isActive = b === btn;
+        b.classList.toggle("active", isActive);
+        b.setAttribute("aria-selected", String(isActive));
+      });
+      render();
+    });
+  });
+
+  // 月曆月份切換
+  document.getElementById("cal-prev").addEventListener("click", () => {
+    shiftCalendar(-1);
+  });
+  document.getElementById("cal-next").addEventListener("click", () => {
+    shiftCalendar(1);
+  });
+  document.getElementById("cal-today").addEventListener("click", () => {
+    const now = new Date();
+    state.calendar.centerYear = now.getFullYear();
+    state.calendar.centerMonth = now.getMonth();
+    render();
+  });
+
   // 視窗從背景切回前景 → 立刻刷新
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") {
       fetchData();
     }
   });
+
+  // Day modal 設定
+  setupDayModal();
 }
 
 function setActiveChip(activeBtn, attr) {
@@ -184,8 +220,10 @@ function formatRelative(seconds) {
 /* ---------- Render ---------- */
 function render() {
   const tbody = document.getElementById("exh-tbody");
+  const tableEl = document.getElementById("exh-table");
   const emptyEl = document.getElementById("empty-state");
   const errorEl = document.getElementById("error-state");
+  const calendarEl = document.getElementById("calendar-view");
   const countEl = document.getElementById("result-count");
 
   errorEl.hidden = true;
@@ -195,8 +233,20 @@ function render() {
   );
 
   state.filteredCount = rows.length;
-
   countEl.innerHTML = `共 <strong>${rows.length}</strong> / ${state.exhibitions.length} 筆`;
+
+  if (state.viewMode === "calendar") {
+    // 切到月曆模式
+    tableEl.hidden = true;
+    emptyEl.hidden = true;
+    calendarEl.hidden = false;
+    renderCalendar(rows);
+    return;
+  }
+
+  // 清單模式
+  tableEl.hidden = false;
+  calendarEl.hidden = true;
 
   if (rows.length === 0) {
     tbody.innerHTML = "";
@@ -351,6 +401,241 @@ function sortByDate(rows) {
     const aDate = a.startDate || (dir > 0 ? "9999-12-31" : "0000-01-01");
     const bDate = b.startDate || (dir > 0 ? "9999-12-31" : "0000-01-01");
     return dir * aDate.localeCompare(bDate);
+  });
+}
+
+/* ---------- Calendar ---------- */
+const MAX_EVENTS_PER_CELL = 4;
+const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
+
+function shiftCalendar(delta) {
+  // delta = +1 (下個月) or -1 (上個月)
+  const d = new Date(state.calendar.centerYear, state.calendar.centerMonth + delta, 1);
+  state.calendar.centerYear = d.getFullYear();
+  state.calendar.centerMonth = d.getMonth();
+  render();
+}
+
+function renderCalendar(events) {
+  const container = document.getElementById("calendar-months");
+  const cy = state.calendar.centerYear;
+  const cm = state.calendar.centerMonth;
+
+  // 單月顯示
+  const month = (() => {
+    const d = new Date(cy, cm, 1);
+    return { year: d.getFullYear(), month: d.getMonth() };
+  })();
+
+  // 把每個事件展開到它涵蓋的所有日期
+  const eventsByDate = buildEventsByDate(events);
+  // 暫存到 state 給 modal 使用
+  state.calendar._eventsByDate = eventsByDate;
+
+  container.innerHTML = monthHtml(month, eventsByDate);
+
+  // 綁定 +N 點擊（event delegation）
+  container.querySelectorAll(".cal-overflow").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.day;
+      const dayEvents = eventsByDate.get(key) || [];
+      showDayModal(key, dayEvents);
+    });
+  });
+}
+
+function buildEventsByDate(events) {
+  const map = new Map();
+  for (const exh of events) {
+    if (!exh.startDate) continue;
+    const start = new Date(exh.startDate);
+    const end = exh.endDate ? new Date(exh.endDate) : start;
+    if (isNaN(start) || isNaN(end)) continue;
+
+    // 從 start 走到 end，每天加一筆
+    const cursor = new Date(start);
+    cursor.setHours(0, 0, 0, 0);
+    const stop = new Date(end);
+    stop.setHours(0, 0, 0, 0);
+
+    let safety = 365; // 防呆：避免異常日期把瀏覽器卡死
+    while (cursor <= stop && safety-- > 0) {
+      const key = isoDate(cursor);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key).push(exh);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+  }
+  return map;
+}
+
+function isoDate(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function monthHtml({ year, month }, eventsByDate) {
+  const firstDay = new Date(year, month, 1);
+  const startWeekday = firstDay.getDay(); // 0 = 週日
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const today = isoDate(new Date());
+  const monthLabel = `${year} 年 ${month + 1} 月`;
+
+  // 6 列 × 7 欄，總共 42 格
+  const cells = [];
+
+  // 前面的空白（上個月的尾巴）
+  const prevDays = new Date(year, month, 0).getDate();
+  for (let i = startWeekday - 1; i >= 0; i--) {
+    const day = prevDays - i;
+    const d = new Date(year, month - 1, day);
+    cells.push(dayCellHtml(d, eventsByDate, today, true));
+  }
+
+  // 本月的天
+  for (let day = 1; day <= daysInMonth; day++) {
+    const d = new Date(year, month, day);
+    cells.push(dayCellHtml(d, eventsByDate, today, false));
+  }
+
+  // 後面的空白（下個月的頭）填到 42 格
+  while (cells.length < 42) {
+    const dayOffset = cells.length - startWeekday - daysInMonth + 1;
+    const d = new Date(year, month + 1, dayOffset);
+    cells.push(dayCellHtml(d, eventsByDate, today, true));
+  }
+
+  return `
+    <div class="cal-month">
+      <div class="cal-month-head">${monthLabel}</div>
+      <div class="cal-weekdays">
+        ${WEEKDAY_LABELS.map(
+          (w, i) =>
+            `<div class="cal-weekday${i === 0 || i === 6 ? " is-weekend" : ""}">${w}</div>`,
+        ).join("")}
+      </div>
+      <div class="cal-grid">
+        ${cells.join("")}
+      </div>
+    </div>
+  `;
+}
+
+function dayCellHtml(d, eventsByDate, todayKey, isOutside) {
+  const key = isoDate(d);
+  const events = eventsByDate.get(key) || [];
+  const isToday = key === todayKey;
+  const weekday = d.getDay();
+  const isWeekend = weekday === 0 || weekday === 6;
+
+  const classNames = [
+    "cal-cell",
+    isOutside ? "is-outside" : "",
+    isToday ? "is-today" : "",
+    isWeekend ? "is-weekend" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const visible = events.slice(0, MAX_EVENTS_PER_CELL);
+  const overflow = events.length - visible.length;
+
+  const eventChips = visible
+    .map((exh) => {
+      const cls = exh.isCompany ? "cal-event-company" : "cal-event-exhibition";
+      const url = exh.officialUrl || exh.notionUrl;
+      return `<a class="cal-event ${cls}" href="${escapeAttr(url)}" target="_blank" rel="noopener" title="${escapeAttr(exh.name)}">${escapeHtml(exh.name)}</a>`;
+    })
+    .join("");
+
+  const overflowHtml =
+    overflow > 0
+      ? `<button class="cal-overflow" data-day="${key}" type="button">+${overflow} 更多</button>`
+      : "";
+
+  return `
+    <div class="${classNames}">
+      <div class="cal-day-num">${d.getDate()}</div>
+      <div class="cal-events">${eventChips}${overflowHtml}</div>
+    </div>
+  `;
+}
+
+/* ---------- Day Modal（點 +N 展開該日全部事件） ---------- */
+function showDayModal(dateKey, events) {
+  const modal = document.getElementById("cal-day-modal");
+  const dateEl = document.getElementById("cal-day-modal-date");
+  const eventsEl = document.getElementById("cal-day-modal-events");
+
+  const [y, m, d] = dateKey.split("-");
+  const dateObj = new Date(parseInt(y), parseInt(m) - 1, parseInt(d));
+  const weekdayName = ["週日", "週一", "週二", "週三", "週四", "週五", "週六"][dateObj.getDay()];
+  dateEl.textContent = `${parseInt(y)} 年 ${parseInt(m)} 月 ${parseInt(d)} 日 ${weekdayName}`;
+
+  if (events.length === 0) {
+    eventsEl.innerHTML = `<p class="modal-empty">這天沒有事件。</p>`;
+  } else {
+    eventsEl.innerHTML = events
+      .map((exh) => {
+        const cls = exh.isCompany ? "modal-event-company" : "modal-event-exhibition";
+        const url = exh.officialUrl || exh.notionUrl;
+        const badge = exh.isCompany
+          ? `<span class="modal-event-badge">企業</span>`
+          : "";
+        const meta = [
+          exh.location,
+          exh.status,
+          ...(exh.industries || exh.industry || []),
+        ]
+          .filter(Boolean)
+          .map((t) => `<span class="modal-event-meta-tag">${escapeHtml(t)}</span>`)
+          .join("");
+        const dateRange =
+          exh.endDate && exh.endDate !== exh.startDate
+            ? `${formatDate(exh.startDate)} – ${formatDate(exh.endDate)}`
+            : formatDate(exh.startDate);
+        return `
+          <a class="modal-event ${cls}" href="${escapeAttr(url)}" target="_blank" rel="noopener">
+            <div class="modal-event-head">
+              ${badge}
+              <span class="modal-event-name">${escapeHtml(exh.name)}</span>
+            </div>
+            <div class="modal-event-date">${escapeHtml(dateRange)}</div>
+            ${exh.organizer ? `<div class="modal-event-org">${escapeHtml(truncate(exh.organizer, 80))}</div>` : ""}
+            ${meta ? `<div class="modal-event-meta">${meta}</div>` : ""}
+          </a>
+        `;
+      })
+      .join("");
+  }
+
+  if (typeof modal.showModal === "function") {
+    modal.showModal();
+  } else {
+    modal.setAttribute("open", "");
+  }
+}
+
+function setupDayModal() {
+  const modal = document.getElementById("cal-day-modal");
+  if (!modal || modal._setup) return;
+  modal._setup = true;
+
+  // 關閉按鈕
+  document.getElementById("cal-day-modal-close").addEventListener("click", () => {
+    if (typeof modal.close === "function") modal.close();
+    else modal.removeAttribute("open");
+  });
+
+  // 點背景關閉
+  modal.addEventListener("click", (e) => {
+    if (e.target === modal) {
+      if (typeof modal.close === "function") modal.close();
+      else modal.removeAttribute("open");
+    }
   });
 }
 

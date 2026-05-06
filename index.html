@@ -84,6 +84,25 @@
       </div>
     </section>
 
+    <!-- ============ VIEW MODE TABS ============ -->
+    <section class="view-mode">
+      <div class="view-mode-tabs" role="tablist" aria-label="檢視模式">
+        <button class="mode-tab active" data-view-mode="list" role="tab" aria-selected="true">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          清單
+        </button>
+        <button class="mode-tab" data-view-mode="calendar" role="tab" aria-selected="false">
+          <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
+            <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
+            <path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          月曆
+        </button>
+      </div>
+    </section>
+
     <!-- ============ FILTERS ============ -->
     <section class="filters">
       <div class="filter-group" role="tablist" aria-label="類型篩選">
@@ -164,6 +183,24 @@
       <div class="error-state" id="error-state" hidden>
         <p id="error-text"></p>
       </div>
+
+      <!-- ============ CALENDAR VIEW ============ -->
+      <div class="calendar-view" id="calendar-view" hidden>
+        <div class="calendar-nav">
+          <button class="cal-nav-btn" id="cal-prev" type="button" aria-label="上一月">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M15 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+          <button class="cal-today-btn" id="cal-today" type="button">今天</button>
+          <button class="cal-nav-btn" id="cal-next" type="button" aria-label="下一月">
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <path d="M9 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="calendar-months" id="calendar-months"></div>
+      </div>
     </main>
 
     <!-- ============ FOOTER ============ -->
@@ -176,6 +213,21 @@
       </p>
     </footer>
   </div>
+
+  <!-- ============ DAY MODAL ============ -->
+  <dialog class="cal-day-modal" id="cal-day-modal">
+    <div class="cal-day-modal-inner">
+      <div class="cal-day-modal-head">
+        <h3 class="cal-day-modal-date" id="cal-day-modal-date"></h3>
+        <button class="cal-day-modal-close" id="cal-day-modal-close" type="button" aria-label="關閉">
+          <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+            <path d="M6 6l12 12M18 6l-12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </button>
+      </div>
+      <div class="cal-day-modal-events" id="cal-day-modal-events"></div>
+    </div>
+  </dialog>
 
   <script src="./app.js" defer></script>
 </body>
