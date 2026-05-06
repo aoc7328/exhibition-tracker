@@ -89,6 +89,12 @@ export async function onRequest(context) {
 function transformPage(page) {
   const p = page.properties || {};
 
+  // 拆分：「企業」標籤獨立成 isCompany；其餘為真正產業類別
+  const COMPANY_TAG = "\u4F01\u696D"; // 「企業」
+  const allTags = getMultiSelect(p["產業類別"]) || [];
+  const isCompany = allTags.includes(COMPANY_TAG);
+  const industries = allTags.filter((t) => t !== COMPANY_TAG);
+
   return {
     id: page.id,
     notionUrl: page.url,
@@ -98,7 +104,9 @@ function transformPage(page) {
       getDateEnd(p["開始日期"]) ||
       getDateStart(p["結束日期"]) ||
       getDateStart(p["開始日期"]),
-    industry: getMultiSelect(p["產業類別"]),
+    industries,
+    industry: industries, // 向後相容
+    isCompany,
     confidence: getSelect(p["信心度"]),
     location: getSelect(p["地點"]),
     sourceLevel: getSelect(p["來源層次"]),

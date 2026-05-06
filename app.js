@@ -491,15 +491,16 @@ function renderCalendar(events) {
     });
   });
 
-  // 綁定 cell 點擊（整個格子都可點，跳出當日 modal）
-  container.querySelectorAll(".cal-day-bg").forEach((cell) => {
-    cell.addEventListener("click", () => {
-      const key = cell.dataset.day;
+  // 綁定右下角 + 按鈕（每格一個）
+  container.querySelectorAll(".cal-day-add").forEach((btn) => {
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const key = btn.dataset.day;
       showDayModal(key, eventsForDay(events, key));
     });
   });
 
-  // 綁定 event bar 點擊：阻止冒泡（避免同時觸發 cell 的 modal）
+  // 事件條本身保持可點（開官網），不冒泡到任何父層
   container.querySelectorAll(".cal-event-bar").forEach((bar) => {
     bar.addEventListener("click", (e) => {
       e.stopPropagation();
@@ -657,7 +658,7 @@ function weekHtml(weekDays, allEvents, todayKey) {
 
   // 生成 HTML
   // 每週一個 grid：7 columns × (1 + MAX_VISIBLE_ROWS + 1) rows
-  // row 1 = 日期數字、row 2..MAX+1 = 事件條、row MAX+2 = 「+N」
+  // row 1 = 日期數字、row 2..MAX+1 = 事件條、row MAX+2 = 「+N」or「+ 按鈕」
   const dayBgCells = weekDays
     .map((d, c) => dayBgCellHtml(d, todayKey, c))
     .join("");
@@ -668,8 +669,12 @@ function weekHtml(weekDays, allEvents, todayKey) {
     .filter((s) => s.row < MAX_VISIBLE_ROWS)
     .map((s) => eventBarHtml(s))
     .join("");
+  // overflow 跟 + 按鈕：同一格只有 overflow 顯示時不放 +（避免重複入口）
   const overflowCells = weekDays
     .map((d, c) => overflowCellHtml(d, overflowByCol[c], c))
+    .join("");
+  const dayAddCells = weekDays
+    .map((d, c) => dayAddCellHtml(d, overflowByCol[c], c))
     .join("");
 
   return `
@@ -678,6 +683,7 @@ function weekHtml(weekDays, allEvents, todayKey) {
       ${dayNumCells}
       ${eventBars}
       ${overflowCells}
+      ${dayAddCells}
     </div>
   `;
 }
@@ -695,7 +701,7 @@ function dayBgCellHtml(d, todayKey, col) {
   ]
     .filter(Boolean)
     .join(" ");
-  return `<div class="${cls}" data-day="${key}" style="grid-column: ${col + 1}; grid-row: 1 / -1"></div>`;
+  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1 / -1"></div>`;
 }
 
 function dayNumCellHtml(d, col) {
@@ -732,6 +738,14 @@ function overflowCellHtml(d, count, col) {
   if (count <= 0) return "";
   const key = isoDate(d.date);
   return `<button class="cal-overflow" data-day="${key}" type="button" style="grid-column: ${col + 1}; grid-row: ${MAX_VISIBLE_ROWS + 2}">+${count}</button>`;
+}
+
+// 右下角 + 按鈕：每一格都有，但若該格已經有 +N（overflow），就不重複放
+function dayAddCellHtml(d, overflowCount, col) {
+  if (d.isOutside) return ""; // 上下月空白格不放 +
+  if (overflowCount > 0) return ""; // 有 +N 時，+N 已是入口，不重複
+  const key = isoDate(d.date);
+  return `<button class="cal-day-add" data-day="${key}" type="button" aria-label="查看 ${d.date.getDate()} 日" style="grid-column: ${col + 1}; grid-row: ${MAX_VISIBLE_ROWS + 2}">+</button>`;
 }
 
 /* ---------- Day Modal（點 +N 展開該日全部事件） ---------- */

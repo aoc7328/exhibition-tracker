@@ -831,16 +831,11 @@ code {
   min-height: 130px;
 }
 
-/* 背景格（提供日期格的視覺底色與 click 區域） */
+/* 背景格（純視覺底色，已不再可點） */
 .cal-day-bg {
   background: var(--bg-soft);
-  cursor: pointer;
-  transition: background 0.12s ease;
   z-index: 0;
   border-radius: 1px;
-}
-.cal-day-bg:hover {
-  background: var(--bg);
 }
 .cal-day-bg.is-outside {
   background: var(--bg);
@@ -852,15 +847,9 @@ code {
 .cal-day-bg.is-outside.is-weekend {
   background: var(--bg);
 }
+/* 今天：上緣磚紅 bar，無底色變化、無描邊（編輯雜誌風） */
 .cal-day-bg.is-today {
-  background: var(--accent-soft);
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
-  z-index: 1;
-}
-.cal-day-bg.is-today:hover {
-  background: var(--accent-soft);
-  filter: brightness(0.97);
+  box-shadow: inset 0 3px 0 0 var(--accent);
 }
 
 /* 日期數字（覆蓋在 bg 之上，不接收點擊） */
@@ -944,6 +933,36 @@ code {
   text-indent: 4px;
 }
 .cal-overflow:hover {
+  background: var(--ink-1);
+  color: var(--bg-soft);
+}
+
+/* 右下角 + 按鈕：每格一個（沒 +N 才出現） */
+.cal-day-add {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--ink-4);
+  font-family: var(--font-mono);
+  font-weight: 400;
+  padding: 0;
+  margin: 0 4px 2px 0;
+  width: 18px;
+  height: 18px;
+  background: transparent;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  align-self: end;
+  justify-self: end; /* 推到右側 */
+  opacity: 0; /* 預設透明，hover 整週時才浮現 */
+  transition: all 0.15s ease;
+}
+.cal-week:hover .cal-day-add {
+  opacity: 0.6;
+}
+.cal-day-add:hover {
+  opacity: 1 !important;
   background: var(--ink-1);
   color: var(--bg-soft);
 }
