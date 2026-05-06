@@ -753,10 +753,12 @@ function dayBgCellHtml(d, todayKey, col) {
 function dayNumCellHtml(d, col) {
   const key = isoDate(d.date);
   const today = isoDate(new Date());
+  const isWeekend = col === 0 || col === 6;
   const cls = [
     "cal-day-num",
     key === today ? "is-today" : "",
     d.isOutside ? "is-outside" : "",
+    isWeekend ? "is-weekend" : "",
   ]
     .filter(Boolean)
     .join(" ");
@@ -768,10 +770,10 @@ function dayNumCellHtml(d, col) {
   if (markets && markets.length > 0) {
     // 排序：台在前、美在後
     const sorted = ["台", "美"].filter((m) => markets.includes(m));
-    holidayMark = `<span class="cal-holiday-mark">休市:${sorted.join("")}</span>`;
+    holidayMark = `<span class="cal-holiday-mark">休市：${sorted.join("")}</span>`;
   }
 
-  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1">${d.date.getDate()}${holidayMark}</div>`;
+  return `<div class="${cls}" style="grid-column: ${col + 1}; grid-row: 1"><span class="cal-day-num-text">${d.date.getDate()}</span>${holidayMark}</div>`;
 }
 
 function eventBarHtml(seg) {

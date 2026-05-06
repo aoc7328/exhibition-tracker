@@ -780,13 +780,13 @@ code {
 .cal-month-head {
   font-family: var(--font-serif);
   font-weight: 700;
-  font-size: 22px;
+  font-size: 24px;
   color: var(--ink-1);
   text-align: center;
   letter-spacing: 0.02em;
-  margin-bottom: 12px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--rule-soft);
+  margin-bottom: 16px;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .cal-weekdays {
@@ -813,75 +813,94 @@ code {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  background: var(--rule);
-  border: 1px solid var(--rule);
-  border-radius: 2px;
+  background: var(--rule-soft);
+  border: 1px solid var(--rule-soft);
+  border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 1px 2px rgba(26, 31, 26, 0.04),
+              0 4px 12px rgba(26, 31, 26, 0.04);
 }
 
-/* 一週 = 一個獨立 grid。gap + background 形成分隔線 */
+/* 一週 = 一個獨立 grid */
 .cal-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  /* 6 個 row：日期數字 + 4 條事件 + +N */
-  grid-template-rows: 22px repeat(4, 22px) 22px;
+  /* 6 個 row：日期數字 (28px 給休市標記空間) + 4 條事件 + +N */
+  grid-template-rows: 30px repeat(4, 22px) 22px;
   gap: 1px;
-  background: var(--rule);
-  min-height: 130px;
+  background: var(--rule-soft);
+  min-height: 138px;
 }
 
 /* 背景格（純視覺底色，已不再可點）
- * 三階色差 — 邊界靠 .cal-week 的 gap 形成
- *   本月平日：最白的米
- *   本月週末：明顯較深的米色
- *   非本月：更深的灰米色（一眼識別不是本月） */
+ * 美學設計：所有格子統一純米白底，靠數字色而非色塊區分平日/週末/上下月
+ * 邊界靠 .cal-week 的 1px gap (var(--rule-soft)) 形成 */
 .cal-day-bg {
-  background: var(--bg-card);          /* 本月平日：最白 */
+  background: var(--bg-card);
   z-index: 0;
 }
-.cal-day-bg.is-weekend {
-  background: #ede4cd;                  /* 本月週末：深米色，跟平日有明顯落差 */
-}
-.cal-day-bg.is-outside {
-  background: #d8d0b8;                  /* 非本月：明顯灰米，一看就知道不是本月 */
-}
-.cal-day-bg.is-outside.is-weekend {
-  background: #cec4a8;                  /* 非本月週末：再深一階 */
-}
-/* 今天：上緣磚紅 bar */
-.cal-day-bg.is-today {
-  box-shadow: inset 0 3px 0 0 var(--accent);
-}
+/* 今天的視覺標示移到日期數字（紅色實心圓圈），格子本身不再特殊處理 */
 
-/* 日期數字（覆蓋在 bg 之上，不接收點擊） */
+/* 日期數字容器（覆蓋在 bg 之上，不接收點擊） */
 .cal-day-num {
-  font-family: var(--font-mono);
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-2);
-  padding: 4px 0 0 6px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 4px 6px 0;
   z-index: 2;
   pointer-events: none;
-  align-self: start;
-}
-.cal-day-num.is-today {
-  color: var(--accent);
-  font-weight: 700;
-}
-.cal-day-num.is-outside {
-  opacity: 0.5;
 }
 
-/* 休市標記：直接寫在日期數字旁的純文字（紅色強調，不加底色） */
+/* 數字本身：用 inline-flex 讓「今天」可以畫成圓圈 */
+.cal-day-num-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 5px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  border-radius: 50%;
+  line-height: 1;
+}
+
+/* 週末：紅字（本月） */
+.cal-day-num.is-weekend .cal-day-num-text {
+  color: var(--accent);
+}
+
+/* 上下月：淡灰字 */
+.cal-day-num.is-outside .cal-day-num-text {
+  color: var(--ink-4);
+  font-weight: 400;
+}
+
+/* 上下月週末：仍淡，但稍微帶點紅 */
+.cal-day-num.is-outside.is-weekend .cal-day-num-text {
+  color: #d4a89c;
+}
+
+/* 今天：磚紅實心圓圈 + 白字粗體（iOS 風格） */
+.cal-day-num.is-today .cal-day-num-text {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* 休市標記：放在日期數字下方的小紅字 */
 .cal-holiday-mark {
   display: inline-block;
-  margin-left: 6px;
+  margin-left: 2px;
   font-family: var(--font-sans);
-  font-size: 9px;
+  font-size: 9.5px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--accent);
-  vertical-align: 1px;
+  line-height: 1;
 }
 
 /* 事件條（破格，跨多個 column） */
@@ -889,15 +908,15 @@ code {
   display: flex;
   align-items: center;
   height: 20px;
-  margin: 1px 2px;
-  padding: 0 7px;
-  font-size: 11px;
+  margin: 1px 3px;
+  padding: 0 8px;
+  font-size: 12px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: 0.01em;
   color: #fff;
   background: var(--accent);
-  border-radius: 3px;
+  border-radius: 4px;
   text-decoration: none;
   white-space: nowrap;
   overflow: hidden;
@@ -933,20 +952,19 @@ code {
 /* +N 按鈕（每週每一日的最後一行） */
 .cal-overflow {
   font-size: 10px;
-  color: var(--ink-2);
+  color: var(--ink-3);
   font-family: var(--font-mono);
   font-weight: 600;
-  padding: 2px 0;
-  margin: 0 2px;
+  padding: 2px 8px;
+  margin: 0 3px;
   background: transparent;
   border: none;
-  border-radius: 2px;
+  border-radius: 4px;
   cursor: pointer;
   text-align: left;
   z-index: 2;
   align-self: end;
   transition: all 0.15s ease;
-  text-indent: 4px;
 }
 .cal-overflow:hover {
   background: var(--ink-1);
@@ -961,7 +979,7 @@ code {
   font-family: var(--font-mono);
   font-weight: 400;
   padding: 0;
-  margin: 0 4px 2px 0;
+  margin: 0 4px 3px 0;
   width: 18px;
   height: 18px;
   background: transparent;
@@ -975,12 +993,12 @@ code {
   transition: all 0.15s ease;
 }
 .cal-week:hover .cal-day-add {
-  opacity: 0.6;
+  opacity: 0.5;
 }
 .cal-day-add:hover {
   opacity: 1 !important;
-  background: var(--ink-1);
-  color: var(--bg-soft);
+  background: var(--accent);
+  color: #fff;
 }
 
 /* ---------- Day modal ---------- */
