@@ -92,24 +92,9 @@ industries:
     known_exhibitions: []
 
   # ============================================================
-  # 臺灣專屬(同完整版)
+  # 臺灣展覽(文具/建材/旅展等)→ 不放這裡,改由 Layer 1 免費爬蟲處理
+  # ------------------------------------------------------------
+  # 台北世貿(twtc.py)+ 南港展覽館(nangang.py)會直接爬場館官網的展覽分頁(純 HTTP,
+  # 不花 API、不需 Puppeteer),再用 config/industries.yaml 的關鍵字
+  # (文具/禮品/建材/旅展/觀光…)自動分類。所以這些台灣展不必再花 Perplexity 查。
   # ============================================================
-  - name: 文具禮品
-    taiwan_only: true
-    keywords: [文具, 禮品, stationery, gift]
-    known_exhibitions:
-      - 台北國際文具禮品展 TIGS
-
-  - name: 建材
-    taiwan_only: true
-    keywords: [建材, 建築, 建築材料]
-    known_exhibitions:
-      - BUILD TAIWAN 台北國際建築建材暨產品展
-      - TaipeiPLAS
-
-  - name: 旅展
-    taiwan_only: true
-    keywords: [旅展, 觀光, travel, tourism]
-    known_exhibitions:
-      - ITF 台北國際旅展
-      - TTE 台北國際觀光博覽會
