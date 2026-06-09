@@ -787,7 +787,9 @@ function eventBarHtml(seg) {
           ? "is-macro"
           : exh.isCompany
             ? "is-company"
-            : "",
+            : exh.location === "臺灣"
+              ? "is-taiwan"
+              : "",
     isContStart ? "is-cont-start" : "",
     isContEnd ? "is-cont-end" : "",
   ]
@@ -838,7 +840,9 @@ function showDayModal(dateKey, events) {
               ? "modal-event-macro"
               : exh.isCompany
                 ? "modal-event-company"
-                : "modal-event-exhibition";
+                : exh.location === "臺灣"
+                  ? "modal-event-taiwan"
+                  : "modal-event-exhibition";
         const url = exh.officialUrl || exh.notionUrl;
         let badge = "";
         if (exh.isHolding) {

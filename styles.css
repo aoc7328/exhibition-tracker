@@ -31,7 +31,7 @@
   /* Accents */
   --accent: #b83d26; /* brick red */
   --accent-soft: #e8d2c8;
-  --accent-2: #3d5a2c; /* deep green */
+  --accent-2: #1f6f78; /* teal — 持股 */
   --accent-3: #2d4a6b; /* deep blue */
   --accent-4: #5b3f94; /* deep purple — 企業 */
   --accent-4-soft: #ebe2f5;
@@ -39,6 +39,7 @@
   --accent-5-soft: #f3e9d0;
   --accent-6: #b03a6e; /* rose — 科技盛事 */
   --accent-6-soft: #f5dce8;
+  --accent-7: #3d5a2c; /* 墨綠 — 台灣展（地點＝臺灣，世貿/南港等） */
 
   /* States */
   --ok: #4f7a4a;
@@ -956,6 +957,9 @@ code {
 .cal-event-bar.is-flagship {
   background: var(--accent-6);
 }
+.cal-event-bar.is-taiwan {
+  background: var(--accent-7);
+}
 /* 跨週延續：左/右邊去圓角 + 視覺暗示 */
 .cal-event-bar.is-cont-start {
   border-top-left-radius: 0;
@@ -1125,6 +1129,9 @@ code {
 }
 .modal-event.modal-event-flagship {
   border-left-color: var(--accent-6);
+}
+.modal-event.modal-event-taiwan {
+  border-left-color: var(--accent-7);
 }
 
 .modal-event-head {
