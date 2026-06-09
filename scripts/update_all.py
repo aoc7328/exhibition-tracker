@@ -84,7 +84,7 @@ HARDCODED_COMPANY_TAGS: dict[str, list[str]] = {
 
 def _load_taiwan_company_tags() -> dict[str, list[str]]:
     """台股公司 mapping 從 config/taiwan_companies.yaml 動態讀(支援增刪)"""
-    from src.scrapers.taiwan_monthly import load_companies
+    from src.scrapers.taiwan_conferences import load_companies
 
     tags: dict[str, list[str]] = {}
     for c in load_companies():

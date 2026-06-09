@@ -28,42 +28,20 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run layer 1 (TWTC + 南港 爬蟲)
+      # 一條龍:Layer1 爬蟲 + 財報 + 法說會(MOPS) + 總經(M平方) + Layer2(Perplexity) + 產 .ics
+      # 與本機 run_all_in_one.bat 完全同一支程式、同一組參數,確保行為一致。
+      - name: Run full pipeline (update_all, Perplexity engine)
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
           NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-        run: |
-          if [ -n "${{ github.event.inputs.year }}" ]; then
-            python scripts/update_layer1.py --apply --year "${{ github.event.inputs.year }}"
-          else
-            python scripts/update_layer1.py --apply
-          fi
-
-      - name: Run layer 2 (whitelist + AI discovery)
-        env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-        run: |
-          if [ -n "${{ github.event.inputs.year }}" ]; then
-            python scripts/update_layer2_whitelist.py --apply --year "${{ github.event.inputs.year }}"
-          else
-            python scripts/update_layer2_whitelist.py --apply
-          fi
-
-      - name: Run macro calendar (財經 M 平方 ICS → Notion，重要美國總經)
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-          # 選填：要 CI 也換 Perplexity 引擎時設此 secret
           PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
-        run: python scripts/update_all.py --skip-layer1 --skip-layer2 --skip-earnings --skip-ics
-
-      - name: Generate .ics file
-        env:
-          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
-          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
-        run: python scripts/generate_ics.py
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+        run: |
+          if [ -n "${{ github.event.inputs.year }}" ]; then
+            python scripts/update_all.py --lean --no-validate --years "${{ github.event.inputs.year }}"
+          else
+            python scripts/update_all.py --lean --no-validate
+          fi
 
       - name: Deploy .ics to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3

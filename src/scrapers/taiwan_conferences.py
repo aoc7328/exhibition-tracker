@@ -14,15 +14,28 @@ from __future__ import annotations
 
 import re
 from datetime import date
+from pathlib import Path
 from typing import Any
 
 import requests
+import yaml
 from bs4 import BeautifulSoup
 
 from ..logger import get_logger
-from .taiwan_monthly import load_companies  # 共用同一份 yaml 公司清單
 
 logger = get_logger(__name__)
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+COMPANIES_YAML = PROJECT_ROOT / "config" / "taiwan_companies.yaml"
+
+
+def load_companies() -> list[dict[str, Any]]:
+    """讀 config/taiwan_companies.yaml 的追蹤公司清單(可隨時增刪,不寫死)"""
+    if not COMPANIES_YAML.exists():
+        return []
+    with open(COMPANIES_YAML, encoding="utf-8") as f:
+        data = yaml.safe_load(f) or {}
+    return data.get("companies", []) or []
 
 AJAX_URL = "https://mopsov.twse.com.tw/mops/web/ajax_t100sb02_1"
 PAGE_URL = "https://mopsov.twse.com.tw/mops/web/t100sb02_1"
