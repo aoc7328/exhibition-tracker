@@ -38,7 +38,7 @@ from src.notion_writer import (  # noqa: E402
 from src.scrapers.earnings import fetch_earnings  # noqa: E402
 from src.scrapers.macro_calendar import fetch_macro_events  # noqa: E402
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
-from src.scrapers.taiwan_monthly import generate_monthly_revenue_events  # noqa: E402
+from src.scrapers.taiwan_conferences import fetch_conferences  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
 from src.settings import (  # noqa: E402
     FINNHUB_API_KEY,
@@ -186,13 +186,20 @@ def _should_skip_claude(ex_name: str, year: int) -> bool:
     return end_d >= date.today()
 
 
-def run_taiwan_monthly(dry_run: bool) -> None:
-    """生成台股月營收公布日(台積電/台達電)→ 寫 Notion"""
-    logger.info("=== 台股月營收公布日(每月 10 日)===")
-    events = generate_monthly_revenue_events()
+def run_taiwan_conferences(dry_run: bool) -> None:
+    """從 MOPS 法人說明會一覽表抓 tracked 公司的『真實法說會排程』→ 寫 Notion(tag 企業)
+
+    取代舊的「每月 10 日推算月營收」(10 號常落在週末/國定假日,推算不可靠)。
+    """
+    logger.info("=== 台股法說會(MOPS 法人說明會一覽表,真排程)===")
+    try:
+        events = fetch_conferences()
+    except Exception as e:
+        logger.exception(f"法說會抓取失敗: {e}")
+        return
+
     written = 0
     for ev in events:
-        extras = _company_extra_industries(ev["name"])
         ex = Exhibition(
             name=ev["name"],
             start_date=ev["start_date"],
@@ -202,7 +209,7 @@ def run_taiwan_monthly(dry_run: bool) -> None:
             url=ev.get("url", ""),
             confidence=Confidence.HIGH,
             source=SourceLayer.WHITELIST,
-            industries=sorted(set([CORPORATE_LABEL] + extras)),
+            industries=sorted(set([CORPORATE_LABEL] + (ev.get("extra_industries") or []))),
             status=Status.CONFIRMED,
         )
         try:
@@ -210,7 +217,7 @@ def run_taiwan_monthly(dry_run: bool) -> None:
             written += 1
         except Exception as e:
             logger.exception(f"upsert 失敗 {ex.unique_key}: {e}")
-    logger.info(f"台股月營收: 抓 {len(events)} 筆,寫入 {written} 筆")
+    logger.info(f"台股法說會: 抓 {len(events)} 筆,寫入 {written} 筆")
 
 
 def run_macro(dry_run: bool) -> None:
@@ -372,17 +379,8 @@ def run_layer2(
             return
         logger.info(f"只跑指定產業: {industry_filter}")
 
-    # 動態 inject 台股法說會 entries 進「企業」類別
-    from src.scrapers.taiwan_monthly import load_companies
-    taiwan_companies = load_companies()
-    for ind in industries:
-        if ind.get("name") == CORPORATE_LABEL and taiwan_companies:
-            existing_known = ind.setdefault("known_exhibitions", []) or []
-            for c in taiwan_companies:
-                meeting_name = f"{c['name']} {c['ticker']} 法說會"
-                if meeting_name not in existing_known:
-                    existing_known.append(meeting_name)
-            ind["known_exhibitions"] = existing_known
+    # 註:台股法說會已改由 src/scrapers/taiwan_conferences.py 直接抓 MOPS 真排程
+    # (免費、權威),不再 inject 進「企業」類別用 Perplexity 查,省額度也避免重複。
 
     for ind in industries:
         name = ind["name"]
@@ -568,8 +566,8 @@ def main() -> int:
         if not args.skip_earnings:
             # Earnings (Finnhub API) — 快、權威、不需要 Claude CLI
             run_earnings(dry_run)
-            # 台股月營收(每月 10 日,純 generator,不需要 Claude)
-            run_taiwan_monthly(dry_run)
+            # 台股法說會(MOPS 真排程,純 HTTP,不需要 Claude/Perplexity)
+            run_taiwan_conferences(dry_run)
 
         if not args.skip_macro:
             # 總經數據(M 平方 ICS,純 HTTP,不需 API key / Claude)
