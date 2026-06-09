@@ -51,6 +51,14 @@ jobs:
             python scripts/update_layer2_whitelist.py --apply
           fi
 
+      - name: Run macro calendar (財經 M 平方 ICS → Notion，重要美國總經)
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+          NOTION_DATABASE_ID: ${{ secrets.NOTION_DATABASE_ID }}
+          # 選填：要 CI 也換 Perplexity 引擎時設此 secret
+          PERPLEXITY_API_KEY: ${{ secrets.PERPLEXITY_API_KEY }}
+        run: python scripts/update_all.py --skip-layer1 --skip-layer2 --skip-earnings --skip-ics
+
       - name: Generate .ics file
         env:
           NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}

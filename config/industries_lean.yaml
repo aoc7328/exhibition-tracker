@@ -50,43 +50,57 @@ industries:
       - Electronica
 
   - name: 消費電子綜合
-    keywords: [CES, IFA, Computex, consumer electronics]
+    keywords: [CES, IFA, consumer electronics]
     known_exhibitions:
       - CES Las Vegas
       - IFA Berlin
-      - Computex Taipei
+      # Computex Taipei 已移到「科技盛事」類別(桃紅)
 
   # ============================================================
-  # 企業 — MAG7 + 台股龍頭的年度發表會 / 法說會 / 月營收
-  # 注意:
-  # - quarterly earnings 由 Finnhub API scraper 抓(美股)
-  # - 月營收由 generator 抓(每月 10 日,台股)
-  # - 法說會由 Claude CLI 查(此處列已知)
+  # 科技盛事 — 超大型科技公司發表盛事 / 開發者大會(桃紅標記)
+  # 與「企業」(財報/法說會/月營收)刻意區隔:這裡是「產品與技術發表」的旗艦活動。
+  # NVIDIA GTC 各地區分開列 —— unique key 是「展名 + 年份」,同年同名只會留一筆,
+  # 所以不分開的話 6 月的 GTC Taipei 會被 3 月的 GTC San Jose 蓋掉(比照下方 Code with Claude 三城市拆法)。
   # ============================================================
-  - name: 企業
-    keywords: [keynote, event, developer conference, investor day, AI day, 法說會]
+  - name: 科技盛事
+    keywords: [keynote, developer conference, launch event, Unpacked, 發表會, WWDC, GTC, I/O]
     known_exhibitions:
       - Apple WWDC
       - Apple iPhone Event September
       - Apple Mac Event
       - Google I/O
       - Google Pixel Event
-      - NVIDIA GTC
+      - Google Cloud Next
+      - NVIDIA GTC San Jose
+      - NVIDIA GTC Taipei
+      - NVIDIA GTC Washington DC
       - AMD Advancing AI Event
       - Microsoft Build
       - Microsoft Ignite
       - Meta Connect
       - AWS re:Invent
+      - OpenAI DevDay
       - Oracle CloudWorld
+      - Samsung Galaxy Unpacked
+      - Qualcomm Snapdragon Summit
+      - Computex Taipei
       - Tesla AI Day
       - SpaceX Starship Update
-      - OpenAI DevDay
-      # Anthropic 巡迴系列 (Code with Claude),三場獨立列出避免 Claude 把日期合併
+      # Anthropic 巡迴系列 (Code with Claude),三場獨立列出避免把日期合併
       - Code with Claude SF
       - Code with Claude London
       - Code with Claude Tokyo
-      # 台股龍頭法說會由 update_all 從 config/taiwan_companies.yaml 動態 inject
-      # 月營收由 src/scrapers/taiwan_monthly.py 從同一個 yaml 動態生成
+
+  # ============================================================
+  # 企業 — 純財務事件(財報 / 法說會 / 月營收 / 投資人會議,紫色標記)
+  # 注意:
+  # - 美股 quarterly earnings 由 Finnhub API scraper 抓
+  # - 台股月營收由 src/scrapers/taiwan_monthly.py 抓(每月 10 日)
+  # - 台股法說會由 update_all 從 config/taiwan_companies.yaml 動態 inject 進此類別
+  # ============================================================
+  - name: 企業
+    keywords: [法說會, investor day, earnings call, 財報, 投資人會議, 業績發表]
+    known_exhibitions: []
 
   # ============================================================
   # 臺灣專屬(同完整版)

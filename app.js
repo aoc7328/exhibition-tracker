@@ -74,7 +74,7 @@ const state = {
     direction: "asc", // asc | desc
   },
   knownIndustries: [], // 記錄已渲染過的產業列表，避免每次資料更新都重生 chip
-  viewMode: "list", // list | calendar
+  viewMode: "calendar", // list | calendar — 預設進月曆
   calendar: {
     // 中央顯示的月份（{ year, month } where month is 0-indexed）
     centerYear: new Date().getFullYear(),
@@ -443,12 +443,18 @@ function setupIndustryChips() {
 /* ---------- Filter ---------- */
 function matchesFilter(exh) {
   // Type filter（最前面的篩選）
-  // exhibition：不含「企業」標籤 → 純商展（不論有無產業類別）
-  // company：含「企業」標籤 → 法說會、月營收、年度發表會
+  // exhibition：純商展 → 不含 企業 / 總經 / 科技盛事 標籤
+  // company：含「企業」標籤 → 財報、月營收、法說會
+  // flagship：含「科技盛事」標籤 → WWDC / GTC / Computex / I/O 等發表盛事
+  // macro：含「總經」標籤 → 重要總體經濟數據公布
   if (state.filter.type === "exhibition") {
-    if (exh.isCompany) return false;
+    if (exh.isCompany || exh.isMacro || exh.isFlagship) return false;
   } else if (state.filter.type === "company") {
     if (!exh.isCompany) return false;
+  } else if (state.filter.type === "flagship") {
+    if (!exh.isFlagship) return false;
+  } else if (state.filter.type === "macro") {
+    if (!exh.isMacro) return false;
   }
 
   // Status filter
@@ -780,7 +786,15 @@ function eventBarHtml(seg) {
   const { exh, startCol, endCol, isContStart, isContEnd, row } = seg;
   const cls = [
     "cal-event-bar",
-    exh.isHolding ? "is-holding" : exh.isCompany ? "is-company" : "",
+    exh.isHolding
+      ? "is-holding"
+      : exh.isFlagship
+        ? "is-flagship"
+        : exh.isMacro
+          ? "is-macro"
+          : exh.isCompany
+            ? "is-company"
+            : "",
     isContStart ? "is-cont-start" : "",
     isContEnd ? "is-cont-end" : "",
   ]
@@ -825,13 +839,21 @@ function showDayModal(dateKey, events) {
       .map((exh) => {
         const cls = exh.isHolding
           ? "modal-event-holding"
-          : exh.isCompany
-            ? "modal-event-company"
-            : "modal-event-exhibition";
+          : exh.isFlagship
+            ? "modal-event-flagship"
+            : exh.isMacro
+              ? "modal-event-macro"
+              : exh.isCompany
+                ? "modal-event-company"
+                : "modal-event-exhibition";
         const url = exh.officialUrl || exh.notionUrl;
         let badge = "";
         if (exh.isHolding) {
           badge = `<span class="modal-event-badge modal-event-badge-holding">持股</span>`;
+        } else if (exh.isFlagship) {
+          badge = `<span class="modal-event-badge modal-event-badge-flagship">盛事</span>`;
+        } else if (exh.isMacro) {
+          badge = `<span class="modal-event-badge modal-event-badge-macro">總經</span>`;
         } else if (exh.isCompany) {
           badge = `<span class="modal-event-badge">企業</span>`;
         }
@@ -942,6 +964,10 @@ function nameCell(exh) {
   let badge = "";
   if (exh.isHolding) {
     badge = `<span class="badge-holding" title="持股相關事件">持股</span>`;
+  } else if (exh.isFlagship) {
+    badge = `<span class="badge-flagship" title="超大型科技發表盛事">盛事</span>`;
+  } else if (exh.isMacro) {
+    badge = `<span class="badge-macro" title="重要總體經濟數據公布">總經</span>`;
   } else if (exh.isCompany) {
     badge = `<span class="badge-company" title="企業相關事件">企業</span>`;
   }

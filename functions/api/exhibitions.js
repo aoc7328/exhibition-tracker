@@ -97,10 +97,18 @@ function transformPage(page) {
   const HOLDING_TAG = "\u6301\u80A1"; // 持股
 
   const allTags = getMultiSelect(p["產業類別"]) || [];
+  const MACRO_TAG = "總經"; // 總經
+  const FLAGSHIP_TAG = "科技盛事"; // 科技盛事
   const isCompany = allTags.includes(COMPANY_TAG);
   const isHolding = allTags.includes(HOLDING_TAG);
+  const isMacro = allTags.includes(MACRO_TAG);
+  const isFlagship = allTags.includes(FLAGSHIP_TAG);
   const industries = allTags.filter(
-    (t) => t !== COMPANY_TAG && t !== HOLDING_TAG,
+    (t) =>
+      t !== COMPANY_TAG &&
+      t !== HOLDING_TAG &&
+      t !== MACRO_TAG &&
+      t !== FLAGSHIP_TAG,
   );
 
   return {
@@ -116,6 +124,8 @@ function transformPage(page) {
     industry: industries, // 向後相容
     isCompany,
     isHolding,
+    isMacro,
+    isFlagship,
     confidence: getSelect(p["信心度"]),
     location: getSelect(p["地點"]),
     sourceLevel: getSelect(p["來源層次"]),

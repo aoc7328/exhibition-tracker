@@ -59,6 +59,29 @@ Notion API
 - 應該看到表格載入並顯示資料
 - 如果出現「⚠ NOTION_TOKEN 未設定」→ 回去檢查環境變數有沒有設好、有沒有重新部署
 
+## 分類與顏色標記
+
+月曆／清單用「產業類別」multi_select 的標籤決定分類顏色（互斥，優先序由上而下）：
+
+| 標籤 | 顏色 | 意義 |
+|---|---|---|
+| `持股` | 墨綠 | 使用者手動追蹤的台股月營收 |
+| `科技盛事` | 桃紅 | 超大型科技發表盛事（WWDC、GTC、Computex、Google I/O…） |
+| `總經` | 琥珀金 | 重要美國總體經濟數據（FOMC、非農、CPI、PCE…，影響美股） |
+| `企業` | 紫 | 純財務事件（財報、法說會、月營收、投資人會議） |
+| （產業標籤） | 磚紅 | 一般商展 |
+
+- `總經` 資料來自「財經 M 平方 全球財經日曆」公開 ICS，由 `src/scrapers/macro_calendar.py` 過濾出會影響美股的重要美國數據後寫入 Notion。
+- `科技盛事`／`企業` 由 `scripts/update_all.py` 的 Layer 2 透過查詢引擎（Perplexity 或 Claude）查當年精確日期。
+- 顏色定義在 `styles.css` 的 `--accent*` 變數；前端判斷在 `functions/api/exhibitions.js`（讀標籤）與 `app.js`（套色）。
+
+### 查詢引擎（Perplexity ＋ Claude）
+
+Layer 2 的「搜尋／發現」可用 Perplexity（即時 web search＋引用）或 Claude CLI，整理／複核固定交給 Claude：
+
+- 設定 `.env` 的 `PERPLEXITY_API_KEY` 後，`update_all.py` 預設改用 Perplexity；未設定則回退 Claude CLI。
+- 可用 `python scripts/update_all.py --engine perplexity|claude` 強制指定。
+
 ## 自訂事項
 
 ### 訂閱網址

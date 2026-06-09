@@ -24,8 +24,8 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+from src import claude_query, perplexity_query  # noqa: E402  查詢引擎(可切換)
 from src.category_filter import load_industries, match_industries  # noqa: E402
-from src.claude_query import discover_new_exhibitions, query_exhibition  # noqa: E402
 from src.claude_validator import validate_exhibition  # noqa: E402
 from src.ics_generator import generate_ics  # noqa: E402
 from src.logger import get_logger  # noqa: E402
@@ -36,6 +36,7 @@ from src.notion_writer import (  # noqa: E402
     upsert_exhibition,
 )
 from src.scrapers.earnings import fetch_earnings  # noqa: E402
+from src.scrapers.macro_calendar import fetch_macro_events  # noqa: E402
 from src.scrapers.nangang import fetch_exhibitions as fetch_nangang  # noqa: E402
 from src.scrapers.taiwan_monthly import generate_monthly_revenue_events  # noqa: E402
 from src.scrapers.twtc import fetch_exhibitions as fetch_twtc  # noqa: E402
@@ -45,12 +46,18 @@ from src.settings import (  # noqa: E402
     GITHUB_TOKEN,
     INDUSTRIES_YAML,
     INDUSTRIES_YAML_LEAN,
+    PERPLEXITY_API_KEY,
 )
 
 logger = get_logger(__name__)
 
 
 CORPORATE_LABEL = "企業"
+FLAGSHIP_LABEL = "科技盛事"  # 超大型科技發表盛事(桃紅),比照企業帶產業 cross-tag
+MACRO_LABEL = "總經"  # 重要美國總體經濟數據(琥珀金)
+
+# 查詢/發現引擎(main() 依 --engine 或 PERPLEXITY_API_KEY 覆蓋)
+_ENGINE = claude_query
 
 # 美股龍頭 — 寫死 mapping
 HARDCODED_COMPANY_TAGS: dict[str, list[str]] = {
@@ -204,6 +211,37 @@ def run_taiwan_monthly(dry_run: bool) -> None:
     logger.info(f"台股月營收: 抓 {len(events)} 筆,寫入 {written} 筆")
 
 
+def run_macro(dry_run: bool) -> None:
+    """從財經 M 平方 ICS 抓重要美國總經數據 → 寫 Notion(tag 總經)"""
+    logger.info("=== 總經數據(財經 M 平方 ICS,重要美國數據)===")
+    try:
+        events = fetch_macro_events()
+    except Exception as e:
+        logger.exception(f"總經行事曆抓取失敗: {e}")
+        return
+
+    written = 0
+    for ev in events:
+        ex = Exhibition(
+            name=ev["name"],
+            start_date=ev["start_date"],
+            end_date=ev["end_date"],
+            location=Location.WORLD,
+            organizer=ev.get("organizer", ""),
+            url=ev.get("url", ""),
+            confidence=Confidence.HIGH,
+            source=SourceLayer.WHITELIST,
+            industries=[MACRO_LABEL],
+            status=Status.CONFIRMED,
+        )
+        try:
+            upsert_exhibition(ex, dry_run=dry_run)
+            written += 1
+        except Exception as e:
+            logger.exception(f"upsert 失敗 {ex.unique_key}: {e}")
+    logger.info(f"總經數據: 抓 {len(events)} 筆,寫入 {written} 筆")
+
+
 def run_earnings(dry_run: bool) -> None:
     """從 Finnhub 抓 9 家美股龍頭 quarterly earnings → 寫 Notion"""
     if not FINNHUB_API_KEY:
@@ -253,7 +291,7 @@ def _query_and_upsert(
         logger.info(f"跳過 Claude 查詢: {ex_name} {year}(已確認且未過期)")
         return
 
-    info = query_exhibition(ex_name, year, taiwan_only=taiwan_only)
+    info = _ENGINE.query_exhibition(ex_name, year, taiwan_only=taiwan_only)
     if not info.get("found"):
         logger.info(f"排除 {ex_name} {year}: {info.get('notes', '不符合篩選準則')}")
         return
@@ -281,9 +319,9 @@ def _query_and_upsert(
     loc_str = info.get("location_summary", "")
     location = Location.TAIWAN if "臺灣" in loc_str or "台灣" in loc_str else Location.WORLD
 
-    # 「企業」類別自動加上對應公司的相關產業 tag
+    # 「企業」與「科技盛事」類別自動加上對應公司的相關產業 tag
     industries_list = [industry]
-    if industry == CORPORATE_LABEL:
+    if industry in (CORPORATE_LABEL, FLAGSHIP_LABEL):
         industries_list.extend(_company_extra_industries(ex_name))
     industries_list = sorted(set(industries_list))
 
@@ -352,7 +390,7 @@ def run_layer2(
                 logger.exception(f"查詢失敗 {ex_name}: {e}")
 
         try:
-            new_names = discover_new_exhibitions(
+            new_names = _ENGINE.discover_new_exhibitions(
                 name, keywords, known, year, taiwan_only=taiwan_only
             )
             for ex_name in new_names:
@@ -447,7 +485,14 @@ def main() -> int:
     parser.add_argument("--skip-layer1", action="store_true")
     parser.add_argument("--skip-layer2", action="store_true")
     parser.add_argument("--skip-earnings", action="store_true", help="跳過 Finnhub earnings scraper")
+    parser.add_argument("--skip-macro", action="store_true", help="跳過總經數據(M 平方 ICS)")
     parser.add_argument("--skip-ics", action="store_true")
+    parser.add_argument(
+        "--engine",
+        choices=["perplexity", "claude"],
+        default=None,
+        help="Layer 2 查詢/發現引擎(預設:有 PERPLEXITY_API_KEY 就用 perplexity,否則 claude)",
+    )
     parser.add_argument(
         "--industry",
         type=str,
@@ -464,7 +509,18 @@ def main() -> int:
     dry_run = args.dry_run
     current_year = datetime.now().year
     years = args.years or [current_year, current_year + 1]
-    logger.info(f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years}")
+
+    # 選查詢引擎:Perplexity 搜尋 + Claude 複核(claude_validator)
+    global _ENGINE
+    engine = args.engine or ("perplexity" if PERPLEXITY_API_KEY else "claude")
+    if engine == "perplexity" and not PERPLEXITY_API_KEY:
+        logger.warning("PERPLEXITY_API_KEY 未設定,Layer 2 改用 Claude CLI")
+        engine = "claude"
+    _ENGINE = perplexity_query if engine == "perplexity" else claude_query
+
+    logger.info(
+        f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years} | 查詢引擎: {engine}"
+    )
 
     # 開頭先掃過期(已確認但結束日已過 → 自動標已過期)
     if not dry_run:
@@ -485,6 +541,10 @@ def main() -> int:
             run_earnings(dry_run)
             # 台股月營收(每月 10 日,純 generator,不需要 Claude)
             run_taiwan_monthly(dry_run)
+
+        if not args.skip_macro:
+            # 總經數據(M 平方 ICS,純 HTTP,不需 API key / Claude)
+            run_macro(dry_run)
 
         if not args.skip_layer2:
             # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)

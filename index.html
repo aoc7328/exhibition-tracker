@@ -130,13 +130,13 @@
     <!-- ============ VIEW MODE TABS ============ -->
     <section class="view-mode">
       <div class="view-mode-tabs" role="tablist" aria-label="檢視模式">
-        <button class="mode-tab active" data-view-mode="list" role="tab" aria-selected="true">
+        <button class="mode-tab" data-view-mode="list" role="tab" aria-selected="false">
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
             <path d="M3 6h18M3 12h18M3 18h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
           清單
         </button>
-        <button class="mode-tab" data-view-mode="calendar" role="tab" aria-selected="false">
+        <button class="mode-tab active" data-view-mode="calendar" role="tab" aria-selected="true">
           <svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true">
             <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" stroke-width="2"/>
             <path d="M3 10h18M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -152,6 +152,8 @@
         <button class="chip chip-type active" data-filter-type="all">全部</button>
         <button class="chip chip-type" data-filter-type="exhibition">商展</button>
         <button class="chip chip-type" data-filter-type="company">企業</button>
+        <button class="chip chip-type chip-type-flagship" data-filter-type="flagship" title="超大型科技發表盛事：WWDC / GTC / Computex / Google I/O">科技盛事</button>
+        <button class="chip chip-type chip-type-macro" data-filter-type="macro" title="重要總體經濟數據公布：FOMC / 非農 / CPI / PCE">總經</button>
       </div>
 
       <div class="filter-group" role="tablist" aria-label="狀態篩選">
