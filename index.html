@@ -93,7 +93,7 @@
               <path d="M12 5v14M5 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </span>
-          <span>新增追蹤台股月營收</span>
+          <span>新增追蹤台股法說會</span>
           <span class="add-taiwan-chevron" aria-hidden="true">
             <svg viewBox="0 0 24 24" width="14" height="14">
               <path d="M6 9l6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
@@ -103,26 +103,18 @@
 
         <form id="add-taiwan-form" class="add-taiwan-form">
           <div class="add-taiwan-grid">
-            <label class="add-taiwan-field">
-              <span class="add-taiwan-field-label">代號</span>
-              <input type="text" id="add-tw-ticker" placeholder="例：2454" required>
-            </label>
-            <label class="add-taiwan-field">
-              <span class="add-taiwan-field-label">公司名</span>
-              <input type="text" id="add-tw-name" placeholder="例:聯發科" required>
-            </label>
             <label class="add-taiwan-field add-taiwan-field-wide">
-              <span class="add-taiwan-field-label">相關產業 <em>(空格分隔,選填)</em></span>
-              <input type="text" id="add-tw-industries" placeholder="例:AI 半導體 5G/6G">
+              <span class="add-taiwan-field-label">代號 或 公司名 <em>(擇一即可)</em></span>
+              <input type="text" id="add-tw-query" placeholder="例：2454 或 聯發科" required>
             </label>
           </div>
 
           <div class="add-taiwan-actions">
-            <button type="submit" class="btn btn-primary add-taiwan-submit">加入並更新月營收</button>
+            <button type="submit" class="btn btn-primary add-taiwan-submit">加入並抓法說會</button>
             <span id="add-tw-status" class="add-tw-status"></span>
           </div>
 
-          <p class="add-taiwan-hint">寫入未來最近 2 筆月營收公布（每月 10 日）到 Notion。台股季度法說會通常跟月營收合併。</p>
+          <p class="add-taiwan-hint">即時從公開資訊觀測站抓該公司的「法人說明會」真實排程，寫進 Notion（綠色持股）。給代號最準。</p>
         </form>
       </details>
     </section>

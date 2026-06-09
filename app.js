@@ -100,41 +100,34 @@ function bindAddTaiwanForm() {
 
 async function onAddTaiwanSubmit(e) {
   e.preventDefault();
-  const ticker = document.getElementById("add-tw-ticker").value.trim();
-  const name = document.getElementById("add-tw-name").value.trim();
-  const industriesStr = document.getElementById("add-tw-industries").value.trim();
-  const industries = industriesStr ? industriesStr.split(/\s+/).filter(Boolean) : [];
+  const query = document.getElementById("add-tw-query").value.trim();
   const statusEl = document.getElementById("add-tw-status");
 
-  if (!ticker || !name) {
-    statusEl.textContent = "請填代號與公司名";
+  if (!query) {
+    statusEl.textContent = "請輸入代號或公司名";
     statusEl.className = "add-tw-status is-error";
     return;
   }
 
-  statusEl.textContent = "處理中…";
+  statusEl.textContent = "查 MOPS 法說會中…";
   statusEl.className = "add-tw-status is-loading";
 
   try {
     const resp = await fetch("/api/add-taiwan", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ticker, name, industries }),
+      body: JSON.stringify({ query }),
     });
     const data = await resp.json();
 
     if (resp.ok && data.ok) {
-      statusEl.textContent = `✓ ${name} 加入成功,寫入 ${data.writtenMonthly} 筆月營收`;
+      statusEl.textContent = `✓ ${data.name}（${data.ticker}）加入,寫入 ${data.written} 場法說會`;
       statusEl.className = "add-tw-status is-success";
-      // 清空 form
-      document.getElementById("add-tw-ticker").value = "";
-      document.getElementById("add-tw-name").value = "";
-      document.getElementById("add-tw-industries").value = "";
+      document.getElementById("add-tw-query").value = "";
       // 重新拉資料顯示新加的公司
       setTimeout(() => fetchData(true), 500);
     } else {
-      const errs = [data.monthlyError, data.error].filter(Boolean).join(" | ");
-      statusEl.textContent = `失敗:${errs || resp.status}`;
+      statusEl.textContent = `失敗:${data.error || "HTTP " + resp.status}`;
       statusEl.className = "add-tw-status is-error";
     }
   } catch (err) {
