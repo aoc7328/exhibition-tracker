@@ -26,7 +26,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src import claude_query, perplexity_query  # noqa: E402  查詢引擎(可切換)
 from src.category_filter import load_industries, match_industries  # noqa: E402
-from src.claude_validator import validate_exhibition  # noqa: E402
+from src.claude_validator import _program_sanity_check, validate_exhibition  # noqa: E402
 from src.ics_generator import generate_ics  # noqa: E402
 from src.logger import get_logger  # noqa: E402
 from src.models import Confidence, Exhibition, Location, SourceLayer, Status  # noqa: E402
@@ -58,6 +58,8 @@ MACRO_LABEL = "總經"  # 重要美國總體經濟數據(琥珀金)
 
 # 查詢/發現引擎(main() 依 --engine 或 PERPLEXITY_API_KEY 覆蓋)
 _ENGINE = claude_query
+# True 時跳過 Claude 二次複核(信任引擎結果 + 程式 sanity check),大幅省時間
+_NO_VALIDATE = False
 
 # 美股龍頭 — 寫死 mapping
 HARDCODED_COMPANY_TAGS: dict[str, list[str]] = {
@@ -303,12 +305,21 @@ def _query_and_upsert(
     status = Status.PENDING
 
     if info.get("found") and start and end:
-        validation = validate_exhibition(ex_name, start.year, start, end)
-        if validation.get("confidence_high"):
-            confidence = Confidence.HIGH
-            status = Status.CONFIRMED
+        if _NO_VALIDATE:
+            # 不跑 Claude 二次複核:信任引擎結果,只做程式 sanity(日期合法/未過期/展期合理)
+            sane, reason = _program_sanity_check(start, end, year)
+            if sane:
+                confidence = Confidence.HIGH
+                status = Status.CONFIRMED
+            else:
+                logger.info(f"sanity 未過 {ex_name}: {reason}")
         else:
-            logger.info(f"複核未通過 {ex_name}: {validation.get('reason')}")
+            validation = validate_exhibition(ex_name, start.year, start, end)
+            if validation.get("confidence_high"):
+                confidence = Confidence.HIGH
+                status = Status.CONFIRMED
+            else:
+                logger.info(f"複核未通過 {ex_name}: {validation.get('reason')}")
     else:
         start = end = None
 
@@ -345,6 +356,7 @@ def run_layer2(
     dry_run: bool,
     industry_filter: str | None = None,
     use_lean: bool = False,
+    discover: bool = False,
 ) -> None:
     yaml_path = INDUSTRIES_YAML_LEAN if use_lean else INDUSTRIES_YAML
     logger.info(f"=== Layer 2: Claude CLI 查詢 + 雙階段複核 ({'lean' if use_lean else 'full'}) ===")
@@ -388,6 +400,9 @@ def run_layer2(
                 )
             except Exception as e:
                 logger.exception(f"查詢失敗 {ex_name}: {e}")
+
+        if not discover:
+            continue  # 預設不做動態發現,只跑 curated 白名單(大幅省 API 額度與時間)
 
         try:
             new_names = _ENGINE.discover_new_exhibitions(
@@ -502,24 +517,38 @@ def main() -> int:
     parser.add_argument(
         "--lean",
         action="store_true",
-        help="用精簡版 industries_lean.yaml(每類 1-2 大展 + MAG7 龍頭發表會),適合 Pro $20 訂閱",
+        help="用精簡版 industries_lean.yaml(每類 1-2 大展 + 科技盛事),適合省額度",
+    )
+    parser.add_argument(
+        "--discover",
+        action="store_true",
+        help="開啟動態發現(用關鍵字找白名單外的新展)。預設關閉以省 API 額度",
+    )
+    parser.add_argument(
+        "--no-validate",
+        action="store_true",
+        help="跳過 Claude 二次複核,信任引擎 + 程式 sanity(大幅省時間,搭 Perplexity 用)",
     )
     args = parser.parse_args()
 
     dry_run = args.dry_run
     current_year = datetime.now().year
-    years = args.years or [current_year, current_year + 1]
+    # 預設只跑當年(省一半額度);要連明年一起跑加 --years 2026 2027
+    years = args.years or [current_year]
 
     # 選查詢引擎:Perplexity 搜尋 + Claude 複核(claude_validator)
-    global _ENGINE
+    global _ENGINE, _NO_VALIDATE
     engine = args.engine or ("perplexity" if PERPLEXITY_API_KEY else "claude")
     if engine == "perplexity" and not PERPLEXITY_API_KEY:
         logger.warning("PERPLEXITY_API_KEY 未設定,Layer 2 改用 Claude CLI")
         engine = "claude"
     _ENGINE = perplexity_query if engine == "perplexity" else claude_query
+    _NO_VALIDATE = args.no_validate
 
     logger.info(
-        f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years} | 查詢引擎: {engine}"
+        f"模式: {'DRY-RUN' if dry_run else '實寫'} | 年份: {years} | 引擎: {engine}"
+        f" | 動態發現: {'開' if args.discover else '關'}"
+        f" | 二次複核: {'關' if _NO_VALIDATE else '開'}"
     )
 
     # 開頭先掃過期(已確認但結束日已過 → 自動標已過期)
@@ -550,7 +579,10 @@ def main() -> int:
             # Layer 2 對每個年份分別跑(跨年版本以 unique key 區隔)
             for year in years:
                 logger.info(f"--- Layer 2 年份: {year} ---")
-                run_layer2(year, dry_run, args.industry, use_lean=args.lean)
+                run_layer2(
+                    year, dry_run, args.industry,
+                    use_lean=args.lean, discover=args.discover,
+                )
     except KeyboardInterrupt:
         logger.warning("收到 Ctrl+C 中斷,跳過剩餘抓取,直接產 ICS + push 已寫入的資料")
 

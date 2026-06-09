@@ -62,34 +62,23 @@ industries:
   # NVIDIA GTC 各地區分開列 —— unique key 是「展名 + 年份」,同年同名只會留一筆,
   # 所以不分開的話 6 月的 GTC Taipei 會被 3 月的 GTC San Jose 蓋掉(比照下方 Code with Claude 三城市拆法)。
   # ============================================================
+  # 只留「盛大的年度發表會」頭部清單(刻意精簡以省 API 額度與時間)。
+  # 要追更多(Mac event / Pixel / Ignite / Samsung Unpacked / Snapdragon / Code with Claude…)
+  # 再往下加即可。
   - name: 科技盛事
-    keywords: [keynote, developer conference, launch event, Unpacked, 發表會, WWDC, GTC, I/O]
+    keywords: [keynote, developer conference, launch event, 發表會, WWDC, GTC, I/O]
     known_exhibitions:
       - Apple WWDC
       - Apple iPhone Event September
-      - Apple Mac Event
-      - Google I/O
-      - Google Pixel Event
-      - Google Cloud Next
       - NVIDIA GTC San Jose
       - NVIDIA GTC Taipei
-      - NVIDIA GTC Washington DC
-      - AMD Advancing AI Event
+      - Google I/O
+      - Computex Taipei
       - Microsoft Build
-      - Microsoft Ignite
+      - AMD Advancing AI Event
       - Meta Connect
       - AWS re:Invent
       - OpenAI DevDay
-      - Oracle CloudWorld
-      - Samsung Galaxy Unpacked
-      - Qualcomm Snapdragon Summit
-      - Computex Taipei
-      - Tesla AI Day
-      - SpaceX Starship Update
-      # Anthropic 巡迴系列 (Code with Claude),三場獨立列出避免把日期合併
-      - Code with Claude SF
-      - Code with Claude London
-      - Code with Claude Tokyo
 
   # ============================================================
   # 企業 — 純財務事件(財報 / 法說會 / 月營收 / 投資人會議,紫色標記)

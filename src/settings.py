@@ -32,7 +32,8 @@ FINNHUB_API_KEY = os.getenv("FINNHUB_API_KEY", "")
 # Perplexity API（即時 web 搜尋 → 由 Claude 整理/複核）
 # 設定後 update_all 預設改用 Perplexity 當查詢/發現引擎；未設定則回退 Claude CLI
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY", "")
-PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar-pro")
+# 預設用最便宜的 sonar(查展覽日期堪用);要更強可設 sonar-pro
+PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
 # 總經數據行事曆 — 財經 M 平方全球財經日曆（公開 ICS）
 # 只擷取會影響美股的重要美國總經事件，可用 MACRO_ICS_URL 覆蓋成自己的行事曆

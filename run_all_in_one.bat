@@ -20,14 +20,19 @@ echo    3. Layer 2: Lean whitelist + MAG7 -^> Notion
 echo    4. Generate exhibitions.ics
 echo    5. Push to GitHub gh-pages
 echo.
-echo  Estimated time:
-echo    Max $200:  1-2 hours
-echo    Pro $20:   8-15 hours (rate-limit cycles)
+echo  Curated scope (cost-optimized):
+echo    - No open-ended discovery (whitelist only)
+echo    - Current year only
+echo    - No Claude re-validation (trust engine + sanity)
+echo.
+echo  Estimated time (lean):
+echo    Perplexity engine:  a few minutes
+echo    Claude CLI engine:  ~20-40 min
 echo.
 echo ========================================
 echo.
 
-python scripts\update_all.py --lean
+python scripts\update_all.py --lean --no-validate
 
 echo.
 echo ========================================
