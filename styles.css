@@ -838,11 +838,11 @@ code {
 .cal-week {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  /* 6 個 row：日期數字 (28px 給休市標記空間) + 4 條事件 + +N */
-  grid-template-rows: 30px repeat(4, 22px) 22px;
+  /* 9 個 row：日期數字 (30px 給休市標記空間) + 7 條事件 + +N（約原本 1.5 倍高） */
+  grid-template-rows: 30px repeat(7, 22px) 22px;
   gap: 1px;
   background: var(--rule-soft);
-  min-height: 138px;
+  min-height: 206px;
 }
 
 /* 背景格（純視覺底色，已不再可點）
@@ -1194,8 +1194,8 @@ code {
 /* ---------- Calendar mobile ---------- */
 @media (max-width: 720px) {
   .cal-week {
-    grid-template-rows: 18px repeat(4, 18px) 18px;
-    min-height: 90px;
+    grid-template-rows: 18px repeat(7, 18px) 18px;
+    min-height: 162px;
     gap: 1px;
   }
   .cal-event-bar {

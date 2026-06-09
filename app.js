@@ -510,7 +510,7 @@ function sortByDate(rows) {
 }
 
 /* ---------- Calendar ---------- */
-const MAX_VISIBLE_ROWS = 4; // 每週可見的事件 row 數，超過用 +N
+const MAX_VISIBLE_ROWS = 7; // 每週可見的事件 row 數，超過用 +N（需與 styles.css .cal-week 的 grid-template-rows 同步）
 const WEEKDAY_LABELS = ["日", "一", "二", "三", "四", "五", "六"];
 
 function shiftCalendar(delta) {
