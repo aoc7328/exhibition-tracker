@@ -553,11 +553,31 @@ code {
   border-color: var(--accent-3);
 }
 
+/* 類型篩選 chip 選中時亮成各自的類別色（兼當圖例：對應月曆 6 色） */
 .chip-type.active {
   background: var(--accent-4);
   border-color: var(--accent-4);
 }
-/* 科技盛事 / 總經 篩選 chip 選中時用各自的類別色（桃紅 / 琥珀金） */
+.chip-type-all.active {
+  background: var(--ink-1);
+  border-color: var(--ink-1);
+}
+.chip-type-exhibition.active {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.chip-type-taiwan.active {
+  background: var(--accent-7);
+  border-color: var(--accent-7);
+}
+.chip-type-company.active {
+  background: var(--accent-4);
+  border-color: var(--accent-4);
+}
+.chip-type-holding.active {
+  background: var(--accent-2);
+  border-color: var(--accent-2);
+}
 .chip-type-flagship.active {
   background: var(--accent-6);
   border-color: var(--accent-6);

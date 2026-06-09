@@ -435,18 +435,25 @@ function setupIndustryChips() {
 
 /* ---------- Filter ---------- */
 function matchesFilter(exh) {
-  // Type filter（最前面的篩選）
-  // exhibition：純商展 → 不含 企業 / 總經 / 科技盛事 標籤
-  // company：含「企業」標籤 → 財報、月營收、法說會
-  // flagship：含「科技盛事」標籤 → WWDC / GTC / Computex / I/O 等發表盛事
-  // macro：含「總經」標籤 → 重要總體經濟數據公布
-  if (state.filter.type === "exhibition") {
-    if (exh.isCompany || exh.isMacro || exh.isFlagship) return false;
-  } else if (state.filter.type === "company") {
-    if (!exh.isCompany) return false;
-  } else if (state.filter.type === "flagship") {
+  // Type filter（對應月曆 6 色，互斥）
+  const t = state.filter.type;
+  if (t === "exhibition") {
+    // 國外展（紅）：非 企業/總經/科技盛事/持股，且地點＝世界
+    if (exh.isCompany || exh.isMacro || exh.isFlagship || exh.isHolding) return false;
+    if (exh.location === "臺灣") return false;
+  } else if (t === "taiwan") {
+    // 台灣展（墨綠）：同上但地點＝臺灣
+    if (exh.isCompany || exh.isMacro || exh.isFlagship || exh.isHolding) return false;
+    if (exh.location !== "臺灣") return false;
+  } else if (t === "company") {
+    // 企業（紫）：含企業、但排除持股（持股另成一類）
+    if (!exh.isCompany || exh.isHolding) return false;
+  } else if (t === "holding") {
+    // 持股（靛青）
+    if (!exh.isHolding) return false;
+  } else if (t === "flagship") {
     if (!exh.isFlagship) return false;
-  } else if (state.filter.type === "macro") {
+  } else if (t === "macro") {
     if (!exh.isMacro) return false;
   }
 
